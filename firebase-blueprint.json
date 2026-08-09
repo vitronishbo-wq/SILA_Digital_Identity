@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "processes": {
+      "title": "Processes",
+      "description": "Pedidos de BI e Registo Civil",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "cidadao": { "type": "string" },
+        "tipo": { "type": "string" },
+        "estado": { "type": "string" },
+        "dataCriacao": { "type": "string" },
+        "identidadeStatus": { "type": "string" },
+        "documentacaoStatus": { "type": "string" },
+        "biometriaStatus": { "type": "string" },
+        "fotografiaStatus": { "type": "string" },
+        "analiseStatus": { "type": "string" },
+        "emissaoStatus": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "cidadao", "tipo", "estado"]
+    }
+  }
+}
