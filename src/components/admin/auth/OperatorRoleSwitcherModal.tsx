@@ -17,8 +17,8 @@ import {
   Settings,
   Flame
 } from 'lucide-react';
-import { OperatorRole } from '../../types/auth';
-import { MJDH_OPERATORS, switchActiveOperator, getCurrentSession } from '../../services/accessControlService';
+import { OperatorRole } from '../../../types/auth';
+import { MJDH_OPERATORS, switchActiveOperator, getCurrentSession } from '../../../services/accessControlService';
 
 interface OperatorRoleSwitcherModalProps {
   isOpen: boolean;

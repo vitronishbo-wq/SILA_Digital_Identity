@@ -14,8 +14,8 @@ import {
   Sparkles,
   HelpCircle
 } from 'lucide-react';
-import { getCurrentSession, logoutSession } from '../../services/accessControlService';
-import { OperatorRole } from '../../types/auth';
+import { getCurrentSession, logoutSession } from '../../../services/accessControlService';
+import { OperatorRole } from '../../../types/auth';
 
 interface SessionControlBarProps {
   onOpenRoleSwitcher: () => void;
@@ -187,8 +187,8 @@ export const SessionControlBar: React.FC<SessionControlBarProps> = ({
               <span className="text-neutral-500 block text-[9px] truncate">MFA: {mfaType} • IP: {ipAddress}</span>
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <Laptop className={`w-3.5 h-3.5 ${isTrustedDevice ? 'text-emerald-400' : 'text-amber-400'}`} title={deviceName} />
+          <div className="flex items-center gap-1 shrink-0" title={deviceName}>
+            <Laptop className={`w-3.5 h-3.5 ${isTrustedDevice ? 'text-emerald-400' : 'text-amber-400'}`} />
             <span className="text-[9px] font-bold text-emerald-400">OK</span>
           </div>
         </div>

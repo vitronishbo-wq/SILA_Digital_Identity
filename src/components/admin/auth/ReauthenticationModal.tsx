@@ -8,7 +8,7 @@ import {
   AlertTriangle,
   Fingerprint
 } from 'lucide-react';
-import { reauthenticateSession, getCurrentSession } from '../../services/accessControlService';
+import { reauthenticateSession, getCurrentSession } from '../../../services/accessControlService';
 
 interface ReauthenticationModalProps {
   isOpen: boolean;

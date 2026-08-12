@@ -85,4 +85,5 @@ export type AdminNavTab =
   | 'EMISSAO' 
   | 'AUDITORIA' 
   | 'RELATORIOS' 
-  | 'CONFIGURACOES';
+  | 'CONFIGURACOES'
+  | 'AUTENTICACAO';

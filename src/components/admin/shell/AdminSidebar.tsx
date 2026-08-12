@@ -20,7 +20,8 @@ import {
   Crown,
   LogOut,
   ExternalLink,
-  User
+  User,
+  Shield
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -40,19 +41,20 @@ export interface SidebarLinkItem {
 }
 
 export const SIDEBAR_ITEMS: SidebarLinkItem[] = [
-  { id: 'INICIO', label: 'INÍCIO', icon: <LayoutDashboard className="w-4 h-4" /> },
-  { id: 'PROCESSOS', label: 'PROCESSOS', icon: <Inbox className="w-4 h-4" /> },
-  { id: 'CIDAOES', label: 'CIDADÃOS', icon: <Users className="w-4 h-4" /> },
-  { id: 'IDENTIDADE', label: 'IDENTIDADE', icon: <ShieldCheck className="w-4 h-4" /> },
-  { id: 'BI', label: 'BI', icon: <FileCheck className="w-4 h-4" /> },
-  { id: 'TERRITORIOS', label: 'TERRITÓRIOS', icon: <MapPin className="w-4 h-4" /> },
-  { id: 'AGENDAMENTOS', label: 'AGENDAMENTOS', icon: <Calendar className="w-4 h-4" /> },
-  { id: 'ATENDIMENTO', label: 'ATENDIMENTO', icon: <UserCheck className="w-4 h-4" /> },
-  { id: 'VALIDACOES', label: 'VALIDAÇÕES', icon: <Award className="w-4 h-4" /> },
-  { id: 'EMISSAO', label: 'EMISSÃO', icon: <RefreshCw className="w-4 h-4" /> },
-  { id: 'AUDITORIA', label: 'AUDITORIA', icon: <FileText className="w-4 h-4" /> },
-  { id: 'RELATORIOS', label: 'RELATÓRIOS', icon: <BarChart2 className="w-4 h-4" /> },
-  { id: 'CONFIGURACOES', label: 'CONFIGURAÇÕES', icon: <Settings className="w-4 h-4" /> },
+  { id: 'INICIO', label: '01_INICIO', icon: <LayoutDashboard className="w-4 h-4 text-amber-400" /> },
+  { id: 'AUTENTICACAO', label: '02_IAM_ACESSOS', icon: <Shield className="w-4 h-4 text-amber-400" /> },
+  { id: 'PROCESSOS', label: '03_PROCESSOS', icon: <Inbox className="w-4 h-4 text-amber-400" /> },
+  { id: 'CIDAOES', label: '04_CIDADAOS', icon: <Users className="w-4 h-4 text-amber-400" /> },
+  { id: 'IDENTIDADE', label: '05_IDENTIDADE', icon: <ShieldCheck className="w-4 h-4 text-amber-400" /> },
+  { id: 'BI', label: '06_BI_CARDS', icon: <FileCheck className="w-4 h-4 text-amber-400" /> },
+  { id: 'TERRITORIOS', label: '07_TERRITORIOS', icon: <MapPin className="w-4 h-4 text-amber-400" /> },
+  { id: 'AGENDAMENTOS', label: '08_AGENDAMENTOS', icon: <Calendar className="w-4 h-4 text-amber-400" /> },
+  { id: 'ATENDIMENTO', label: '09_BALCAO', icon: <UserCheck className="w-4 h-4 text-amber-400" /> },
+  { id: 'VALIDACOES', label: '10_VALIDACOES', icon: <Award className="w-4 h-4 text-amber-400" /> },
+  { id: 'EMISSAO', label: '11_EMISSAO', icon: <RefreshCw className="w-4 h-4 text-amber-400" /> },
+  { id: 'AUDITORIA', label: '12_AUDITORIA', icon: <FileText className="w-4 h-4 text-amber-400" /> },
+  { id: 'RELATORIOS', label: '13_RELATORIOS', icon: <BarChart2 className="w-4 h-4 text-amber-400" /> },
+  { id: 'CONFIGURACOES', label: '14_CONFIGURACOES', icon: <Settings className="w-4 h-4 text-amber-400" /> },
 ];
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldAlert, Lock, UserCheck, RefreshCw, AlertTriangle, ArrowRight } from 'lucide-react';
-import { ResourceScope, ActionType } from '../../types/auth';
-import { getCurrentSession, evaluateAccessPolicy } from '../../services/accessControlService';
+import { ResourceScope, ActionType } from '../../../types/auth';
+import { getCurrentSession, evaluateAccessPolicy } from '../../../services/accessControlService';
 import { ReauthenticationModal } from './ReauthenticationModal';
 
 interface AccessGuardProps {

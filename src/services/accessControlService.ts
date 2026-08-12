@@ -74,8 +74,7 @@ export const MJDH_OPERATORS: Record<OperatorRole, OperatorProfile> = {
   AUDITOR: {
     id: 'op-006',
     badgeNumber: 'AUD-3002',
-    fullName: 'Dra. Rosa
- Conceição Neto',
+    fullName: 'Dra. Rosa Conceição Neto',
     email: 'rosa.neto@minjusdh.gov.ao',
     role: 'AUDITOR',
     roleTitle: 'Auditora de Conformidade e Integridade',

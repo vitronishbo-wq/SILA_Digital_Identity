@@ -13,6 +13,15 @@ import { ReauthenticationModal } from './auth/ReauthenticationModal';
 import { CredentialRecoveryModal } from './auth/CredentialRecoveryModal';
 import { PolicyInspectorDrawer } from './auth/PolicyInspectorDrawer';
 import { AccessGuard } from './auth/AccessGuard';
+import { IdentityAccessTab } from './tabs/IdentityAccessTab';
+import { InicioDashboardTab } from './tabs/InicioDashboardTab';
+import { SessionLockModal } from './modals/SessionLockModal';
+import { GlobalKillSessionsModal } from './modals/GlobalKillSessionsModal';
+import { EmergencyBreakGlassModal } from './modals/EmergencyBreakGlassModal';
+import { ControlledDelegationModal } from './modals/ControlledDelegationModal';
+import { OrganizationSelectorModal } from './modals/OrganizationSelectorModal';
+import { getCurrentSession } from '../../services/accessControlService';
+import { OrganizationalScope, OperatorRole } from '../../types/auth';
 import {
   LayoutDashboard, Users, ShieldCheck, RefreshCw, FileText,
   Search, Bell, LogOut, Activity, AlertTriangle, CheckCircle2,
@@ -155,6 +164,32 @@ export const AdminPortalApp: React.FC<AdminPortalAppProps> = ({
   const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const [showPolicyInspector, setShowPolicyInspector] = useState(false);
   const [authNonce, setAuthNonce] = useState(0);
+
+  // Operational Dashboard & Session Security States
+  const currentSessionObj = getCurrentSession();
+  const [isSessionLocked, setIsSessionLocked] = useState(false);
+  const [showKillSessionsModal, setShowKillSessionsModal] = useState(false);
+  const [showBreakGlassModal, setShowBreakGlassModal] = useState(false);
+  const [showDelegationModal, setShowDelegationModal] = useState(false);
+  const [showOrgSelectorModal, setShowOrgSelectorModal] = useState(false);
+
+  const [breakGlassSession, setBreakGlassSession] = useState<{ active: boolean; legalTicketRef?: string; justification?: string }>({
+    active: false
+  });
+
+  const [delegationSession, setDelegationSession] = useState<{ active: boolean; delegatedRole?: string; dispatchRef?: string; supervisorName?: string }>({
+    active: false
+  });
+
+  const [currentOrgScope, setCurrentOrgScope] = useState<OrganizationalScope>(currentSessionObj.operator.organization);
+  const [currentOrgName, setCurrentOrgName] = useState<string>(currentSessionObj.operator.organizationName);
+
+  const availableOrgs: { code: OrganizationalScope; name: string; jurisdiction: string }[] = [
+    { code: 'MJDH_CENTRAL', name: 'Ministério da Justiça e Direitos Humanos (Central)', jurisdiction: 'Nacional' },
+    { code: 'DNIC_LUANDA', name: 'Direcção Nacional de Identificação Civil (DNIC)', jurisdiction: 'Luanda' },
+    { code: 'POSTO_ATENDIMENTO_LUANDA', name: 'Posto de Atendimento de Luanda (Talatona / Cazenga)', jurisdiction: 'Municipal' },
+    { code: 'BALCAO_DIGITAL_NACIONAL', name: 'Balcão Digital Nacional MJDH', jurisdiction: 'Nacional' }
+  ];
 
   // Real-time synchronization with Firestore
   useEffect(() => {
@@ -303,6 +338,9 @@ export const AdminPortalApp: React.FC<AdminPortalAppProps> = ({
           onOpenRoleSwitcher={() => setShowRoleSwitcherModal(true)}
           onOpenReauth={() => setShowReauthModal(true)}
           onOpenPolicyInspector={() => setShowPolicyInspector(true)}
+          currentOrgScope={currentOrgScope}
+          currentOrgName={currentOrgName}
+          onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
           notificationsCount={3}
         />
 
@@ -319,111 +357,47 @@ export const AdminPortalApp: React.FC<AdminPortalAppProps> = ({
         <AdminErrorBoundary>
 
         {/* =========================================================
+            CAMADA 2 — IDENTITY & ACCESS TAB
+           ========================================================= */}
+        {activeTab === 'AUTENTICACAO' && (
+          <div className="animate-in fade-in duration-200">
+            <IdentityAccessTab
+              onOpenRoleSwitcher={() => setShowRoleSwitcherModal(true)}
+              onOpenReauth={() => setShowReauthModal(true)}
+              onOpenRecovery={() => setShowRecoveryModal(true)}
+              onOpenPolicyInspector={() => setShowPolicyInspector(true)}
+              onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
+              onOpenBreakGlass={() => setShowBreakGlassModal(true)}
+              onOpenDelegation={() => setShowDelegationModal(true)}
+              onOpenLockSession={() => setIsSessionLocked(true)}
+            />
+          </div>
+        )}
+
+        {/* =========================================================
             TAB 1: HOME DO MINISTÉRIO (INÍCIO)
            ========================================================= */}
         {activeTab === 'INICIO' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            
-            {/* 1. PROCESSOS KPI CARD */}
-            <div className="p-6 rounded-3xl bg-[#111318] border border-neutral-800 space-y-4">
-              <div className="flex items-center justify-between border-b border-neutral-800/80 pb-3">
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
-                  PROCESSOS
-                </span>
-                <button 
-                  onClick={() => setActiveTab('PROCESSOS')} 
-                  className="text-xs text-neutral-400 hover:text-amber-400 flex items-center gap-1 font-sans"
-                >
-                  <span>Ver todos</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col justify-between">
-                  <span className="text-3xl font-extrabold text-white tracking-tight">1.284</span>
-                  <span className="text-xs font-bold text-amber-400 uppercase mt-2">Em análise</span>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col justify-between">
-                  <span className="text-3xl font-extrabold text-white tracking-tight">86</span>
-                  <span className="text-xs font-bold text-orange-400 uppercase mt-2">Pendentes</span>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-neutral-900/90 border border-neutral-800 flex flex-col justify-between">
-                  <span className="text-3xl font-extrabold text-white tracking-tight">42</span>
-                  <span className="text-xs font-bold text-emerald-400 uppercase mt-2">Hoje</span>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. ATENÇÃO CARD */}
-            <div className="p-6 rounded-3xl bg-[#111318] border border-amber-500/30 space-y-4">
-              <div className="flex items-center gap-2 border-b border-neutral-800/80 pb-3">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">
-                  ATENÇÃO
-                </span>
-              </div>
-
-              <div className="space-y-2 text-xs font-sans">
-                <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between text-neutral-200">
-                  <span className="font-bold font-mono">12 processos aguardam ação</span>
-                  <button 
-                    onClick={() => setActiveTab('PROCESSOS')}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 font-mono text-[10px] font-bold uppercase hover:bg-amber-500/30"
-                  >
-                    Resolver
-                  </button>
-                </div>
-
-                <div className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 flex items-center justify-between text-neutral-200">
-                  <span className="font-bold font-mono">3 documentos sinalizados</span>
-                  <button 
-                    onClick={() => setActiveTab('PROCESSOS')}
-                    className="px-2.5 py-1 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 font-mono text-[10px] font-bold uppercase hover:bg-rose-500/30"
-                  >
-                    Auditar
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* 3. ATIVIDADE RECENTE STREAM */}
-            <div className="p-6 rounded-3xl bg-[#111318] border border-neutral-800 space-y-4">
-              <div className="border-b border-neutral-800/80 pb-3">
-                <span className="text-xs font-bold text-neutral-300 uppercase tracking-widest">
-                  ATIVIDADE RECENTE
-                </span>
-              </div>
-
-              <div className="space-y-3 font-sans text-xs">
-                <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-900/80 border border-neutral-800/80">
-                  <div className="flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-purple-400" />
-                    <span className="font-medium text-neutral-200">Novo pedido registado (REQ-000188)</span>
-                  </div>
-                  <span className="font-mono text-[11px] text-neutral-500">2 min</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-900/80 border border-neutral-800/80">
-                  <div className="flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-blue-400" />
-                    <span className="font-medium text-neutral-200">Biometria recebida com sucesso</span>
-                  </div>
-                  <span className="font-mono text-[11px] text-neutral-500">8 min</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-900/80 border border-neutral-800/80">
-                  <div className="flex items-center gap-3">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                    <span className="font-medium text-neutral-200">BI aprovado pelo conservador</span>
-                  </div>
-                  <span className="font-mono text-[11px] text-neutral-500">14 min</span>
-                </div>
-              </div>
-            </div>
-
+          <div className="animate-in fade-in duration-200">
+            <InicioDashboardTab
+              onOpenProcessTab={(processNumber) => {
+                if (processNumber) {
+                  const target = processes.find(p => p.id === processNumber || p.id.includes(processNumber));
+                  if (target) setSelectedProcess(target);
+                }
+                setActiveTab('PROCESSOS');
+              }}
+              onOpenAuditTab={() => setActiveTab('AUDITORIA')}
+              onOpenLockSession={() => setIsSessionLocked(true)}
+              onOpenKillSessions={() => setShowKillSessionsModal(true)}
+              onOpenBreakGlass={() => setShowBreakGlassModal(true)}
+              onOpenDelegation={() => setShowDelegationModal(true)}
+              onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
+              breakGlassSession={breakGlassSession}
+              delegationSession={delegationSession}
+              currentOrgScope={currentOrgScope}
+              currentOrgName={currentOrgName}
+            />
           </div>
         )}
 
@@ -1120,6 +1094,91 @@ export const AdminPortalApp: React.FC<AdminPortalAppProps> = ({
           </div>
         </div>
       )}
+
+      {/* CAMADA 2 — IDENTITY & ACCESS MODALS & DRAWERS */}
+      <OperatorRoleSwitcherModal
+        isOpen={showRoleSwitcherModal}
+        onClose={() => setShowRoleSwitcherModal(false)}
+        onRoleSwitched={() => setAuthNonce((prev) => prev + 1)}
+      />
+
+      <ReauthenticationModal
+        isOpen={showReauthModal}
+        onClose={() => setShowReauthModal(false)}
+        onSuccess={() => {
+          setAuthNonce((prev) => prev + 1);
+          showNotification('Reautenticação concluída com sucesso!');
+        }}
+      />
+
+      <CredentialRecoveryModal
+        isOpen={showRecoveryModal}
+        onClose={() => setShowRecoveryModal(false)}
+      />
+
+      <PolicyInspectorDrawer
+        isOpen={showPolicyInspector}
+        onClose={() => setShowPolicyInspector(false)}
+      />
+
+      {/* OPERATIONAL & SESSION CONTROL MODALS */}
+      <SessionLockModal
+        isLocked={isSessionLocked}
+        operatorName={currentSessionObj.operator.fullName}
+        badgeNumber={currentSessionObj.operator.badgeNumber}
+        onUnlock={() => {
+          setIsSessionLocked(false);
+          showNotification('Sessão desbloqueada com sucesso!');
+        }}
+      />
+
+      <GlobalKillSessionsModal
+        isOpen={showKillSessionsModal}
+        onClose={() => setShowKillSessionsModal(false)}
+        onConfirmKill={(reason) => {
+          showNotification(`Purga executada na rede! Motivo: ${reason}`);
+        }}
+      />
+
+      <EmergencyBreakGlassModal
+        isOpen={showBreakGlassModal}
+        isActive={breakGlassSession.active}
+        onClose={() => setShowBreakGlassModal(false)}
+        onActivate={(justification, legalTicketRef) => {
+          setBreakGlassSession({ active: true, justification, legalTicketRef });
+          showNotification(`MODO BREAK-GLASS ATIVADO (${legalTicketRef})`);
+        }}
+        onDeactivate={() => {
+          setBreakGlassSession({ active: false });
+          showNotification('Modo Break-Glass desativado.');
+        }}
+      />
+
+      <ControlledDelegationModal
+        isOpen={showDelegationModal}
+        activeDelegation={delegationSession.active}
+        onClose={() => setShowDelegationModal(false)}
+        onStartDelegation={(targetRole, dispatchRef, supervisorName) => {
+          setDelegationSession({ active: true, delegatedRole: targetRole, dispatchRef, supervisorName });
+          showNotification(`Delegação ativa: ${targetRole} (${dispatchRef})`);
+        }}
+        onEndDelegation={() => {
+          setDelegationSession({ active: false });
+          showNotification('Delegação revogada. Função titular restaurada.');
+        }}
+      />
+
+      <OrganizationSelectorModal
+        isOpen={showOrgSelectorModal}
+        currentOrg={currentOrgScope}
+        availableOrgs={availableOrgs}
+        onClose={() => setShowOrgSelectorModal(false)}
+        onSelectOrg={(orgCode, orgName) => {
+          setCurrentOrgScope(orgCode);
+          setCurrentOrgName(orgName);
+          showNotification(`Escopo alterado para ${orgName} (${orgCode})`);
+        }}
+      />
 
     </div>
   );

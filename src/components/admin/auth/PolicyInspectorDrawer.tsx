@@ -17,8 +17,8 @@ import {
   ResourceScope,
   ActionType,
   AccessEvaluationRequest
-} from '../../types/auth';
-import { evaluateAccessPolicy, getCurrentSession } from '../../services/accessControlService';
+} from '../../../types/auth';
+import { evaluateAccessPolicy, getCurrentSession } from '../../../services/accessControlService';
 
 interface PolicyInspectorDrawerProps {
   isOpen: boolean;
