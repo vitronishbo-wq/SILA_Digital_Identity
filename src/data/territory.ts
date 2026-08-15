@@ -25,17 +25,29 @@ export const PROVINCE_CODES: Record<string, string> = {
 export interface Commune {
   id: string;
   name: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  validFrom?: string;
+  validTo?: string;
+  versionId?: string;
 }
 
 export interface Municipality {
   id: string;
   name: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  validFrom?: string;
+  validTo?: string;
+  versionId?: string;
   communes: Commune[];
 }
 
 export interface ProvinceTerritory {
   code: string;
   name: string;
+  status?: 'ACTIVE' | 'INACTIVE';
+  validFrom?: string;
+  validTo?: string;
+  versionId?: string;
   municipalities: Municipality[];
 }
 

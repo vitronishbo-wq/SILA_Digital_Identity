@@ -140,9 +140,9 @@ export const CitizenPwaApp: React.FC<CitizenPwaAppProps> = ({
               </div>
             </div>
 
-            {/* LIVE FIRESTORE PROCESS STATUS TRACKER */}
+            {/* LIVE FIRESTORE PROCESS STATUS TRACKER (HIDDEN) */}
             {citizenProcess && (
-              <div className="p-3.5 rounded-2xl bg-neutral-900/90 border border-amber-500/30 text-left font-mono space-y-2 shadow-lg">
+              <div className="hidden p-3.5 rounded-2xl bg-neutral-900/90 border border-amber-500/30 text-left font-mono space-y-2 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-[10px] text-amber-400 font-bold uppercase">
                     <Clock className="w-3.5 h-3.5" />
@@ -164,8 +164,8 @@ export const CitizenPwaApp: React.FC<CitizenPwaAppProps> = ({
               </div>
             )}
 
-            {/* DETALHES › Action Button */}
-            <div className="w-full pt-1">
+            {/* DETALHES › Action Button (HIDDEN) */}
+            <div className="hidden w-full pt-1">
               <button
                 onClick={handleRequestBiDetail}
                 className="w-full py-3 px-4 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-amber-500/40 flex items-center justify-center gap-2 text-xs font-mono font-bold text-amber-300 hover:text-amber-200 uppercase tracking-widest transition-all active:scale-98 shadow-lg"

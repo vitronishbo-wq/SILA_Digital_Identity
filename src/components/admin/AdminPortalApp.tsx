@@ -15,6 +15,13 @@ import { PolicyInspectorDrawer } from './auth/PolicyInspectorDrawer';
 import { AccessGuard } from './auth/AccessGuard';
 import { IdentityAccessTab } from './tabs/IdentityAccessTab';
 import { InicioDashboardTab } from './tabs/InicioDashboardTab';
+import { ProcessesTab } from './tabs/ProcessesTab';
+import { CitizensTab } from './tabs/CitizensTab';
+import { IdentityChainTab } from './tabs/IdentityChainTab';
+import { BiCardsTab } from './tabs/BiCardsTab';
+import { AppointmentsTab } from './tabs/AppointmentsTab';
+import { AttendanceTab } from './tabs/AttendanceTab';
+import { ValidationsTab } from './tabs/ValidationsTab';
 import { SessionLockModal } from './modals/SessionLockModal';
 import { GlobalKillSessionsModal } from './modals/GlobalKillSessionsModal';
 import { EmergencyBreakGlassModal } from './modals/EmergencyBreakGlassModal';
@@ -273,9 +280,9 @@ export const AdminPortalApp: React.FC<AdminPortalAppProps> = ({
     if (!matchesQuery) return false;
 
     if (filterEstado !== 'TODOS') {
-      if (filterEstado === 'ATIVO' && c.status !== 'VERIFIED') return false;
+      if (filterEstado === 'ATIVO' && c.status !== 'VERIFIED' && c.status !== 'ACTIVE') return false;
       if (filterEstado === 'PENDENTE' && c.status !== 'PENDING') return false;
-      if (filterEstado === 'SUSPENSO' && c.status !== 'REVOKED') return false;
+      if (filterEstado === 'SUSPENSO' && c.status !== 'REVOKED' && c.status !== 'SUSPENDED') return false;
     }
 
     if (filterProvincia !== 'TODAS' && c.provincia !== filterProvincia) {
@@ -402,291 +409,103 @@ export const AdminPortalApp: React.FC<AdminPortalAppProps> = ({
         )}
 
         {/* =========================================================
-            TAB 2: PROCESSOS (THE HEART OF THE SYSTEM)
+            TAB 3: PROCESSOS DE REGISTO & BI (03_PROCESSOS)
            ========================================================= */}
         {activeTab === 'PROCESSOS' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            
-            {/* PROCESSOS TITLE & SEARCH */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
-                  PROCESSOS DE REGISTO & BI
-                </h2>
-                <p className="text-xs text-neutral-400 font-sans">
-                  Central de validação, emissão e análise do Ministério da Justiça
-                </p>
-              </div>
-
-              <div className="relative w-full md:w-72">
-                <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Pesquisar ID ou Cidadão..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#111217] border border-neutral-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500"
-                />
-              </div>
-            </div>
-
-            {/* PROCESS FILTERS: [ Todos ] [ Novos ] [ Em análise ] [ Pendentes ] [ Aprovados ] */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
-              {[
-                { id: 'ALL', label: 'Todos' },
-                { id: 'NOVOS', label: 'Novos' },
-                { id: 'EM_ANALISE', label: 'Em análise' },
-                { id: 'PENDENTES', label: 'Pendentes' },
-                { id: 'APROVADOS', label: 'Aprovados' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setProcessFilter(f.id as any)}
-                  className={`px-4 py-2 rounded-xl font-bold uppercase transition-all whitespace-nowrap ${
-                    processFilter === f.id
-                      ? 'bg-amber-500 text-neutral-950 shadow-md'
-                      : 'bg-[#111217] text-neutral-400 hover:text-white border border-neutral-800'
-                  }`}
-                >
-                  [ {f.label} ]
-                </button>
-              ))}
-            </div>
-
-            {/* PROCESSES TABLE */}
-            <div className="p-4 rounded-3xl bg-[#111318] border border-neutral-800 overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-neutral-800 text-neutral-500 uppercase tracking-wider">
-                    <th className="pb-3 px-3 font-bold">ID</th>
-                    <th className="pb-3 px-3 font-bold">CIDADÃO</th>
-                    <th className="pb-3 px-3 font-bold">TIPO</th>
-                    <th className="pb-3 px-3 font-bold">ESTADO</th>
-                    <th className="pb-3 px-3 font-bold text-right">AÇÃO</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-800/60 font-sans">
-                  {filteredProcesses.map(proc => (
-                    <tr 
-                      key={proc.id} 
-                      onClick={() => setSelectedProcess(proc)}
-                      className="hover:bg-neutral-900/60 cursor-pointer transition-colors"
-                    >
-                      <td className="py-3.5 px-3 font-mono font-bold text-amber-400">{proc.id}</td>
-                      <td className="py-3.5 px-3 font-bold text-white uppercase">{proc.cidadao}</td>
-                      <td className="py-3.5 px-3 font-mono text-neutral-300">{proc.tipo}</td>
-                      <td className="py-3.5 px-3 font-mono">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase ${getBadgeClass(proc.estado)}`}>
-                          {proc.estado}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-3 text-right">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedProcess(proc);
-                          }}
-                          className="px-3 py-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-amber-400 text-[11px] font-mono font-bold uppercase transition-colors"
-                        >
-                          Analisar &rsaquo;
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {filteredProcesses.length === 0 && (
-                <div className="py-12 text-center text-xs text-neutral-500 font-sans">
-                  Nenhum processo encontrado com os filtros aplicados.
-                </div>
-              )}
-            </div>
-
+          <div className="animate-in fade-in duration-200">
+            <ProcessesTab
+              onOpenReauth={() => setShowReauthModal(true)}
+              onOpenPolicyInspector={() => setShowPolicyInspector(true)}
+              onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
+            />
           </div>
         )}
 
         {/* =========================================================
-            TAB 3: CIDADÃOS
+            TAB 4: CONSULTA NACIONAL DE CIDADÃOS (04_CIDADÃOS)
            ========================================================= */}
         {activeTab === 'CIDAOES' && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            
-            {/* SEARCH & FILTERS HEADER */}
-            <div className="flex flex-col gap-4">
-              <div>
-                <h2 className="text-lg font-extrabold text-white uppercase tracking-wider">
-                  CONSULTA NACIONAL DE CIDADÃOS
-                </h2>
-                <p className="text-xs text-neutral-400 font-sans">
-                  Pesquisa autorizada do Ministério da Justiça. Operador em modo de Leitura e Validação.
-                </p>
-              </div>
-
-              {/* SEARCH BAR [ 🔍 Nome / BI / Processo ] */}
-              <div className="relative w-full">
-                <Search className="w-4 h-4 text-amber-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="[ 🔍 Nome / BI / Processo ]"
-                  value={citizenQuery}
-                  onChange={(e) => setCitizenQuery(e.target.value)}
-                  className="w-full bg-[#111217] border border-neutral-800 rounded-2xl pl-10 pr-4 py-3 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-amber-500 font-mono shadow-inner"
-                />
-              </div>
-
-              {/* FILTER BAR: Estado, Província, Município, Tipo de Documento, Data */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 text-xs font-mono">
-                
-                {/* Filtro Estado */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-neutral-500 uppercase">Estado</label>
-                  <select
-                    value={filterEstado}
-                    onChange={(e) => setFilterEstado(e.target.value)}
-                    className="bg-[#111217] border border-neutral-800 rounded-xl px-2.5 py-2 text-neutral-200 focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="TODOS">Todos os Estados</option>
-                    <option value="ATIVO">Ativo</option>
-                    <option value="PENDENTE">Pendente</option>
-                    <option value="SUSPENSO">Suspenso</option>
-                  </select>
-                </div>
-
-                {/* Filtro Província */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-neutral-500 uppercase">Província</label>
-                  <select
-                    value={filterProvincia}
-                    onChange={(e) => setFilterProvincia(e.target.value)}
-                    className="bg-[#111217] border border-neutral-800 rounded-xl px-2.5 py-2 text-neutral-200 focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="TODAS">Todas (21 Províncias)</option>
-                    <option value="Luanda">Luanda</option>
-                    <option value="Benguela">Benguela</option>
-                    <option value="Huambo">Huambo</option>
-                    <option value="Huíla">Huíla</option>
-                    <option value="Cabinda">Cabinda</option>
-                    <option value="Zaire">Zaire</option>
-                  </select>
-                </div>
-
-                {/* Filtro Município */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-neutral-500 uppercase">Município</label>
-                  <select
-                    value={filterMunicipio}
-                    onChange={(e) => setFilterMunicipio(e.target.value)}
-                    className="bg-[#111217] border border-neutral-800 rounded-xl px-2.5 py-2 text-neutral-200 focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="TODOS">Todos Municípios</option>
-                    <option value="Ingombota">Ingombota</option>
-                    <option value="Viana">Viana</option>
-                    <option value="Talatona">Talatona</option>
-                    <option value="Benguela">Benguela</option>
-                    <option value="Huambo">Huambo</option>
-                  </select>
-                </div>
-
-                {/* Filtro Tipo Documento */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-neutral-500 uppercase">Tipo Documento</label>
-                  <select
-                    value={filterDocType}
-                    onChange={(e) => setFilterDocType(e.target.value)}
-                    className="bg-[#111217] border border-neutral-800 rounded-xl px-2.5 py-2 text-neutral-200 focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="TODOS">Todos os Tipos</option>
-                    <option value="BI">BI (Bilhete de Identidade)</option>
-                    <option value="REGISTO_CIVIL">Assento de Nascimento</option>
-                    <option value="NIF">NIF Fiscal</option>
-                  </select>
-                </div>
-
-                {/* Filtro Data */}
-                <div className="flex flex-col gap-1 col-span-2 md:col-span-1">
-                  <label className="text-[10px] text-neutral-500 uppercase">Data Registo</label>
-                  <select
-                    value={filterData}
-                    onChange={(e) => setFilterData(e.target.value)}
-                    className="bg-[#111217] border border-neutral-800 rounded-xl px-2.5 py-2 text-neutral-200 focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="TODOS">Qualquer Data</option>
-                    <option value="HOJE">Hoje</option>
-                    <option value="SEMANA">Esta Semana</option>
-                    <option value="MES">Este Mês</option>
-                  </select>
-                </div>
-
-              </div>
-            </div>
-
-            {/* LISTA DE CIDADÃOS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredCitizens.map(cit => (
-                <div
-                  key={cit.id}
-                  onClick={() => setSelectedCitizenProfile(cit)}
-                  className="p-5 rounded-3xl bg-[#111318] border border-neutral-800 hover:border-amber-500/50 cursor-pointer transition-all space-y-4 hover:shadow-xl group"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3.5">
-                      <img
-                        src={cit.photoUrl}
-                        alt={cit.fullName}
-                        className="w-12 h-12 rounded-2xl object-cover border border-neutral-700 shrink-0"
-                      />
-                      <div>
-                        <h3 className="text-sm font-extrabold text-white uppercase group-hover:text-amber-400 transition-colors">
-                          {cit.fullName}
-                        </h3>
-                        <div className="text-xs font-mono text-neutral-400 mt-0.5">
-                          <span>BI: </span>
-                          <span className="text-amber-400 font-bold">{cit.biNumber}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold font-mono border uppercase ${
-                      cit.status === 'VERIFIED' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                    }`}>
-                      {cit.status === 'VERIFIED' ? 'ATIVO' : 'PENDENTE'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs font-sans pt-2 border-t border-neutral-800/80">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-neutral-500 uppercase font-mono">Processos</span>
-                      <span className="font-mono font-bold text-white">{cit.processCount || 1}</span>
-                    </div>
-
-                    <div className="flex flex-col text-right">
-                      <span className="text-[10px] text-neutral-500 uppercase font-mono">Última Validação</span>
-                      <span className="font-mono font-bold text-neutral-300">{cit.lastVerifiedAt}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredCitizens.length === 0 && (
-              <div className="p-12 rounded-3xl bg-[#111318] border border-neutral-800 text-center text-xs text-neutral-500 font-sans">
-                Nenhum cidadão encontrado com os filtros aplicados.
-              </div>
-            )}
-
+          <div className="animate-in fade-in duration-200">
+            <CitizensTab
+              onOpenReauth={() => setShowReauthModal(true)}
+              onOpenPolicyInspector={() => setShowPolicyInspector(true)}
+              onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
+              onNavigateToProcesses={() => setActiveTab('PROCESSOS')}
+            />
           </div>
         )}
 
         {/* =========================================================
-            TAB 6: TERRITÓRIOS (21 PROVÍNCIAS - SUPERADMIN)
+            TAB 5: CADEIA DE CONFIANÇA DA IDENTIDADE (05_IDENTIDADE)
+           ========================================================= */}
+        {activeTab === 'IDENTIDADE' && (
+          <div className="animate-in fade-in duration-200">
+            <IdentityChainTab
+              onOpenReauth={() => setShowReauthModal(true)}
+              onOpenPolicyInspector={() => setShowPolicyInspector(true)}
+              onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
+              onNavigateToProcesses={() => setActiveTab('PROCESSOS')}
+              onNavigateToCitizens={() => setActiveTab('CIDAOES')}
+            />
+          </div>
+        )}
+
+        {/* =========================================================
+            TAB 6: MÓDULO DO BILHETE DE IDENTIDADE (06_BI_CARDS)
+           ========================================================= */}
+        {activeTab === 'BI' && (
+          <div className="animate-in fade-in duration-200">
+            <BiCardsTab
+              onOpenReauth={() => setShowReauthModal(true)}
+              onOpenPolicyInspector={() => setShowPolicyInspector(true)}
+              onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
+              onNavigateToProcesses={() => setActiveTab('PROCESSOS')}
+              onNavigateToIdentity={() => setActiveTab('IDENTIDADE')}
+              onNavigateToCitizens={() => setActiveTab('CIDAOES')}
+            />
+          </div>
+        )}
+
+        {/* =========================================================
+            TAB 7: TERRITÓRIOS (21 PROVÍNCIAS - SUPERADMIN)
            ========================================================= */}
         {activeTab === 'TERRITORIOS' && (
           <TerritoryManagement />
         )}
 
+        {/* =========================================================
+            TAB 8: AGENDAMENTOS & CAPACIDADE (MÓDULO 08)
+           ========================================================= */}
+        {activeTab === 'AGENDAMENTOS' && (
+          <AppointmentsTab
+            onOpenReauth={() => setShowReauthModal(true)}
+            onOpenPolicyInspector={() => setShowPolicyInspector(true)}
+            onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
+          />
+        )}
+
+        {/* =========================================================
+            TAB 9: ATENDIMENTO & CABINE OPERACIONAL (MÓDULO 09)
+           ========================================================= */}
+        {activeTab === 'ATENDIMENTO' && (
+          <AttendanceTab
+            onOpenReauth={() => setShowReauthModal(true)}
+            onOpenPolicyInspector={() => setShowPolicyInspector(true)}
+            onOpenOrgSelector={() => setShowOrgSelectorModal(true)}
+          />
+        )}
+
+        {/* =========================================================
+            TAB 10: VALIDAÇÕES & DECISÃO INSTITUCIONAL (MÓDULO 10)
+           ========================================================= */}
+        {activeTab === 'VALIDACOES' && (
+          <div className="animate-in fade-in duration-200">
+            <ValidationsTab />
+          </div>
+        )}
+
         {/* OTHER TABS FALLBACK CONTAINER */}
-        {activeTab !== 'INICIO' && activeTab !== 'PROCESSOS' && activeTab !== 'CIDAOES' && activeTab !== 'TERRITORIOS' && (
+        {activeTab !== 'INICIO' && activeTab !== 'PROCESSOS' && activeTab !== 'CIDAOES' && activeTab !== 'IDENTIDADE' && activeTab !== 'BI' && activeTab !== 'TERRITORIOS' && activeTab !== 'AGENDAMENTOS' && activeTab !== 'ATENDIMENTO' && activeTab !== 'VALIDACOES' && (
           <div className="p-8 rounded-3xl bg-[#111318] border border-neutral-800 text-center space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mx-auto">
               <Sparkles className="w-6 h-6" />
@@ -966,7 +785,7 @@ export const AdminPortalApp: React.FC<AdminPortalAppProps> = ({
 
                 <div>
                   <span className="text-[10px] font-mono text-neutral-500 uppercase block">Estado</span>
-                  <span className="text-emerald-400 font-bold font-mono uppercase">{selectedCitizenProfile.status === 'VERIFIED' ? 'ATIVO' : 'PENDENTE'}</span>
+                  <span className="text-emerald-400 font-bold font-mono uppercase">{(selectedCitizenProfile.status === 'VERIFIED' || selectedCitizenProfile.status === 'ACTIVE') ? 'ATIVO' : selectedCitizenProfile.status}</span>
                 </div>
 
                 <div>

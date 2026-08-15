@@ -103,7 +103,7 @@ export const AppPinLock: React.FC<AppPinLockProps> = ({ citizen, onUnlock }) => 
               activeMode === 'PIN' ? 'bg-amber-500 text-neutral-950 shadow-md' : 'text-neutral-400 hover:text-white'
             }`}
           >
-            PIN & BIOMETRIA
+            BIOMETRIA
           </button>
           <button
             onClick={() => setActiveMode('CREDENTIALS')}

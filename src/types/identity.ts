@@ -16,6 +16,16 @@ export interface CitizenDocument {
   metadata?: Record<string, string>;
 }
 
+export type IdentityStatus =
+  | 'ACTIVE'
+  | 'VERIFIED'
+  | 'PENDING'
+  | 'SUSPENDED'
+  | 'REVOKED'
+  | 'DECEASED'
+  | 'MERGED'
+  | 'UNDER_REVIEW';
+
 export interface Citizen {
   id: string;
   biNumber: string;
@@ -31,7 +41,7 @@ export interface Citizen {
   naturalidade?: string;
   filiacaoPai?: string;
   filiacaoMae?: string;
-  status: 'VERIFIED' | 'PENDING' | 'REVOKED';
+  status: IdentityStatus;
   biometricHash: string;
   lastVerifiedAt: string;
   processCount?: number;
