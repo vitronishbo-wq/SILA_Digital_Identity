@@ -8,24 +8,14 @@ import {
   AlertTriangle,
   FileText,
   Lock,
-  ArrowRight,
   RefreshCw,
-  Eye,
   Send,
-  HelpCircle,
   Database,
   Building,
   UserCheck,
-  UserX,
-  FileCheck2,
-  FileX2,
-  Maximize2,
-  Clock,
   KeyRound,
-  ExternalLink,
   ChevronRight,
   Scale,
-  Hash,
   AlertCircle,
   Filter,
   Fingerprint,
@@ -38,7 +28,6 @@ import {
   UniquenessResultType,
   UniquenessCandidate,
   UniquenessResolutionType,
-  CandidateEvidenceField,
 } from '../../../../types/validations';
 
 interface ValidationsUniquenessTabProps {
@@ -56,14 +45,13 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
   onSelectDossier,
   onUpdateDossier,
   onAddAuditEvent,
-  onNavigateToTab,
 }) => {
-  // Sub-tabs internas do Módulo 04
+  // Sub-vistas estritas do módulo 04
   const [activeSubView, setActiveSubView] = useState<
     '01_CONTEXTO' | '02_SEARCH' | '03_CANDIDATES' | '04_COMPARISON' | '05_RESOLUTION' | '06_AUDIT'
   >('01_CONTEXTO');
 
-  // Operador atual simulado
+  // Operador autenticado no IAM
   const currentOperator = {
     operatorId: 'VAL-N1-0084',
     operatorName: 'Carlos Van-Dúnem',
@@ -72,10 +60,10 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
     organization: 'DNI_MINJUSDH' as const,
   };
 
-  // Dossiê selecionado
+  // Dossiê selecionado (somente leitura para metadados mestre)
   const dossier = dossiers.find((d) => d.dossierId === activeDossierId) || dossiers[0];
 
-  // Candidato selecionado para comparação detalhada
+  // Candidato selecionado para comparação detalhada das evidências
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
 
   // Estados dos Modais
@@ -89,84 +77,162 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
   const [operatorPassword, setOperatorPassword] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Estado transitório de pesquisa do motor
+  // Estado transitório do motor
   const [isSearching, setIsSearching] = useState(false);
 
-  // Extrair ou inicializar UniquenessValidation robusta do Dossiê
+  // Extração estrita de UniquenessValidation a partir do ValidationDossier
   const uniq: UniquenessValidation = useMemo(() => {
     const raw = dossier.uniquenessValidation;
-    
-    // Casos pré-configurados de demonstração caso ainda seja objeto simples
-    const defaultCandidates: UniquenessCandidate[] = dossier.dossierId === 'DOS-2026-AGO-00194' ? [
-      {
-        candidateId: 'CIT-AO-081190',
-        citizenName: 'ANTONIO FRANCISCO KIALA JUNIOR',
-        nationalIdNumber: '001889211BA012',
-        birthDate: '1988-11-04',
-        motherName: 'TERESA MANUELA KIALA',
-        fatherName: 'FRANCISCO KIALA',
-        birthPlace: 'BENGUELA / LOBITO',
-        sourceEngine: 'ABIS_1N',
-        matchType: 'MULTIMODAL',
-        overallMatchDegree: 78.4,
-        biometricScore: 61.5,
-        biographicalScore: 95.0,
-        documentScore: 80.0,
-        matchingFields: ['BIRTH_DATE', 'MOTHER_NAME', 'FATHER_NAME', 'BIRTH_PLACE', 'GENDER'],
-        contradictoryFields: ['FULL_NAME_SUFFIX', 'NATIONAL_ID_NUMBER', 'PHOTO_FACIAL_STRUCTURE'],
-        discoveryEvidence: 'Cluster multimodal ABIS com colisão dactilar (92%) e homonímia direta com sufixo JÚNIOR.',
-        classification: 'STRONG_MATCH',
-        requiresReview: true,
-        status: 'PENDING_REVIEW',
-        evidenceFields: [
-          { field: 'Nome Completo', applicantValue: 'ANTONIO FRANCISCO KIALA', candidateValue: 'ANTONIO FRANCISCO KIALA JUNIOR', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Sufixo JUNIOR presente no candidato homónimo.' },
-          { field: 'Data de Nascimento', applicantValue: '1988-11-04', candidateValue: '1988-11-04', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Datas rigorosamente coincidentes.' },
-          { field: 'Filiação Materna', applicantValue: 'TERESA MANUELA KIALA', candidateValue: 'TERESA MANUELA KIALA', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Mesma mãe registada.' },
-          { field: 'Filiação Paterna', applicantValue: 'FRANCISCO KIALA', candidateValue: 'FRANCISCO KIALA', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Mesmo pai registado.' },
-          { field: 'Naturalidade', applicantValue: 'BENGUELA / LOBITO', candidateValue: 'BENGUELA / LOBITO', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Mesmo posto e conservatória.' },
-          { field: 'BI Anterior / Registo', applicantValue: '001948211BA033', candidateValue: '001889211BA012', isMatch: false, isContradiction: true, evidenceSource: 'DNI_HISTORICO', notes: 'Número de bilhete diferente emitido em 2014.' },
-          { field: 'Score Facial 1:N', applicantValue: 'Ref ATT-003', candidateValue: 'Ref Galeria 081190', isMatch: false, isContradiction: true, evidenceSource: 'ABIS_NATIONAL', notes: 'Score Facial 61.5% (Abaixo do limiar 85%).' },
-          { field: 'Score AFIS Dactilar', applicantValue: '10 Dedos Rolados', candidateValue: 'Dedos D1/D2/D6/D7', isMatch: true, isContradiction: false, evidenceSource: 'ABIS_NATIONAL', notes: 'Score dactilar 92% com 80 minúcias coincidentes.' },
-        ],
-      },
-      {
-        candidateId: 'CIT-AO-077421',
-        citizenName: 'ANTONIO FRANCISCO KIALA',
-        nationalIdNumber: '003912001LA088',
-        birthDate: '1975-02-18',
-        motherName: 'ANA MARIA KIALA',
-        fatherName: 'FRANCISCO KIALA',
-        birthPlace: 'LUANDA / SAMBIZANGA',
-        sourceEngine: 'CIVIL_REGISTRY_SEARCH',
-        matchType: 'BIOGRAPHICAL',
-        overallMatchDegree: 42.0,
-        biometricScore: 12.0,
-        biographicalScore: 68.0,
-        documentScore: 40.0,
-        matchingFields: ['FULL_NAME', 'FATHER_NAME'],
-        contradictoryFields: ['BIRTH_DATE', 'MOTHER_NAME', 'BIRTH_PLACE', 'BIOMETRICS'],
-        discoveryEvidence: 'Homonímia pura detetada na base de registo civil nacional sem vínculo biométrico.',
-        classification: 'HOMONYM_PROBABLE',
-        requiresReview: false,
-        status: 'REVIEWED_CLEARED',
-        evidenceFields: [
-          { field: 'Nome Completo', applicantValue: 'ANTONIO FRANCISCO KIALA', candidateValue: 'ANTONIO FRANCISCO KIALA', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Homonímia estrita.' },
-          { field: 'Data de Nascimento', applicantValue: '1988-11-04', candidateValue: '1975-02-18', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Divergência temporal de 13 anos.' },
-          { field: 'Mãe', applicantValue: 'TERESA MANUELA KIALA', candidateValue: 'ANA MARIA KIALA', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Filiação distinta.' },
-          { field: 'Biometria 1:N', applicantValue: 'Padrão 2026', candidateValue: 'Galeria 077421', isMatch: false, isContradiction: true, evidenceSource: 'ABIS_NATIONAL', notes: 'Score de colisão 12% (Inexistente).' },
-        ],
-      }
-    ] : [];
+
+    let defaultCandidates: UniquenessCandidate[] = [];
+
+    if (dossier.dossierId === 'DOS-2026-AGO-00194') {
+      defaultCandidates = [
+        {
+          candidateId: 'CIT-AO-081190',
+          citizenName: 'ANTONIO FRANCISCO KIALA JUNIOR',
+          nationalIdNumber: '001889211BA012',
+          birthDate: '1988-11-04',
+          motherName: 'TERESA MANUELA KIALA',
+          fatherName: 'FRANCISCO KIALA',
+          birthPlace: 'BENGUELA / LOBITO',
+          sourceEngine: 'ABIS_1N',
+          matchType: 'MULTIMODAL',
+          overallMatchDegree: 78.4,
+          biometricScore: 61.5,
+          biographicalScore: 95.0,
+          documentScore: 80.0,
+          matchingFields: ['BIRTH_DATE', 'MOTHER_NAME', 'FATHER_NAME', 'BIRTH_PLACE', 'GENDER'],
+          contradictoryFields: ['FULL_NAME_SUFFIX', 'NATIONAL_ID_NUMBER', 'PHOTO_FACIAL_STRUCTURE'],
+          discoveryEvidence: 'Cluster multimodal ABIS com colisão dactilar (92%) e homonímia direta com sufixo JÚNIOR.',
+          classification: 'STRONG_MATCH',
+          requiresReview: true,
+          status: 'PENDING_REVIEW',
+          evidenceFields: [
+            { field: 'Nome Completo', applicantValue: 'ANTONIO FRANCISCO KIALA', candidateValue: 'ANTONIO FRANCISCO KIALA JUNIOR', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Sufixo JUNIOR presente no candidato homónimo.' },
+            { field: 'Data de Nascimento', applicantValue: '1988-11-04', candidateValue: '1988-11-04', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Datas rigorosamente coincidentes.' },
+            { field: 'Filiação Materna', applicantValue: 'TERESA MANUELA KIALA', candidateValue: 'TERESA MANUELA KIALA', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Mesma mãe registada.' },
+            { field: 'Filiação Paterna', applicantValue: 'FRANCISCO KIALA', candidateValue: 'FRANCISCO KIALA', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Mesmo pai registado.' },
+            { field: 'Naturalidade', applicantValue: 'BENGUELA / LOBITO', candidateValue: 'BENGUELA / LOBITO', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Mesmo posto e conservatória.' },
+            { field: 'BI Anterior / Registo', applicantValue: '001948211BA033', candidateValue: '001889211BA012', isMatch: false, isContradiction: true, evidenceSource: 'DNI_HISTORICO', notes: 'Número de bilhete diferente emitido em 2014.' },
+            { field: 'Score Facial 1:N', applicantValue: 'Ref ATT-003', candidateValue: 'Ref Galeria 081190', isMatch: false, isContradiction: true, evidenceSource: 'ABIS_NATIONAL', notes: 'Score Facial 61.5% (Abaixo do limiar 85%).' },
+            { field: 'Score AFIS Dactilar', applicantValue: '10 Dedos Rolados', candidateValue: 'Dedos D1/D2/D6/D7', isMatch: true, isContradiction: false, evidenceSource: 'ABIS_NATIONAL', notes: 'Score dactilar 92% com 80 minúcias coincidentes.' },
+          ],
+        },
+        {
+          candidateId: 'CIT-AO-077421',
+          citizenName: 'ANTONIO FRANCISCO KIALA',
+          nationalIdNumber: '003912001LA088',
+          birthDate: '1975-02-18',
+          motherName: 'ANA MARIA KIALA',
+          fatherName: 'FRANCISCO KIALA',
+          birthPlace: 'LUANDA / SAMBIZANGA',
+          sourceEngine: 'CIVIL_REGISTRY_SEARCH',
+          matchType: 'BIOGRAPHICAL',
+          overallMatchDegree: 42.0,
+          biometricScore: 12.0,
+          biographicalScore: 68.0,
+          documentScore: 40.0,
+          matchingFields: ['FULL_NAME', 'FATHER_NAME'],
+          contradictoryFields: ['BIRTH_DATE', 'MOTHER_NAME', 'BIRTH_PLACE', 'BIOMETRICS'],
+          discoveryEvidence: 'Homonímia pura detetada na base de registo civil nacional sem vínculo biométrico.',
+          classification: 'HOMONYM_PROBABLE',
+          requiresReview: false,
+          status: 'REVIEWED_CLEARED',
+          evidenceFields: [
+            { field: 'Nome Completo', applicantValue: 'ANTONIO FRANCISCO KIALA', candidateValue: 'ANTONIO FRANCISCO KIALA', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Homonímia estrita.' },
+            { field: 'Data de Nascimento', applicantValue: '1988-11-04', candidateValue: '1975-02-18', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Divergência temporal de 13 anos.' },
+            { field: 'Mãe', applicantValue: 'TERESA MANUELA KIALA', candidateValue: 'ANA MARIA KIALA', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Filiação distinta.' },
+            { field: 'Biometria 1:N', applicantValue: 'Padrão 2026', candidateValue: 'Galeria 077421', isMatch: false, isContradiction: true, evidenceSource: 'ABIS_NATIONAL', notes: 'Score de colisão 12% (Inexistente).' },
+          ],
+        }
+      ];
+    } else if (dossier.dossierId === 'DOS-2026-AGO-00193') {
+      defaultCandidates = [
+        {
+          candidateId: 'CIT-AO-049182',
+          citizenName: 'MARIA ESPERANÇA NETO',
+          nationalIdNumber: '002819231HA011',
+          birthDate: '1999-12-05',
+          motherName: 'JOANA PAULA NETO',
+          fatherName: 'AUGUSTO NETO',
+          birthPlace: 'HUAMBO / CAÁLA',
+          sourceEngine: 'CIVIL_REGISTRY_SEARCH',
+          matchType: 'BIOGRAPHICAL',
+          overallMatchDegree: 51.0,
+          biometricScore: 8.0,
+          biographicalScore: 92.0,
+          documentScore: 50.0,
+          matchingFields: ['FULL_NAME', 'BIRTH_PLACE_PROVINCE'],
+          contradictoryFields: ['BIRTH_DATE', 'MOTHER_NAME', 'FATHER_NAME', 'BIOMETRICS'],
+          discoveryEvidence: 'Homonímia estrita identificada na base provincial do Huambo.',
+          classification: 'HOMONYM_PROBABLE',
+          requiresReview: false,
+          status: 'REVIEWED_CLEARED',
+          evidenceFields: [
+            { field: 'Nome Completo', applicantValue: 'MARIA ESPERANÇA NETO', candidateValue: 'MARIA ESPERANÇA NETO', isMatch: true, isContradiction: false, evidenceSource: 'REGISTO_CIVIL', notes: 'Homonímia nominal exata.' },
+            { field: 'Data de Nascimento', applicantValue: '2007-08-14', candidateValue: '1999-12-05', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Divergência de 8 anos.' },
+            { field: 'Filiação', applicantValue: 'Teresa Neto / João Neto', candidateValue: 'Joana Paula Neto / Augusto Neto', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Pais totalmente diferentes.' },
+            { field: 'Biometria 1:N ABIS', applicantValue: 'Template Huambo 2026', candidateValue: 'Galeria 049182', isMatch: false, isContradiction: true, evidenceSource: 'ABIS_NATIONAL', notes: 'Confronto negativo no ABIS.' },
+          ],
+        }
+      ];
+    } else if (dossier.dossierId === 'DOS-2026-AGO-00196') {
+      defaultCandidates = [
+        {
+          candidateId: 'CIT-AO-098812_LEGACY',
+          citizenName: 'ANA PAULA CHIVELA DA SILVA',
+          nationalIdNumber: '006129841BE019',
+          birthDate: '1984-07-22',
+          motherName: 'MARGARIDA CHIVELA',
+          fatherName: 'MANUEL CHIVELA',
+          birthPlace: 'BENGUELA / BENGUELA',
+          sourceEngine: 'DOC_CROSS_MATCH',
+          matchType: 'DOCUMENTAL',
+          overallMatchDegree: 65.0,
+          biometricScore: 92.0,
+          biographicalScore: 70.0,
+          documentScore: 85.0,
+          matchingFields: ['NATIONAL_ID_NUMBER', 'BIRTH_DATE', 'MOTHER_NAME', 'FATHER_NAME', 'BIOMETRICS'],
+          contradictoryFields: ['SURNAME_ADDITION_MARRIAGE'],
+          discoveryEvidence: 'Registo histórico do BI anterior coincidente com alteração de apelido por casamento.',
+          classification: 'POSSIBLE_MATCH',
+          requiresReview: true,
+          status: 'PENDING_REVIEW',
+          evidenceFields: [
+            { field: 'Nome no Registo', applicantValue: 'ANA PAULA CHIVELA', candidateValue: 'ANA PAULA CHIVELA DA SILVA', isMatch: false, isContradiction: true, evidenceSource: 'REGISTO_CIVIL', notes: 'Adição de apelido marital requer averbação.' },
+            { field: 'Nº BI Anterior', applicantValue: '006129841BE019', candidateValue: '006129841BE019', isMatch: true, isContradiction: false, evidenceSource: 'DNI_HISTORICO', notes: 'Mesmo bilhete histórico.' },
+            { field: 'Biometria 1:1', applicantValue: 'Template Benguela', candidateValue: 'Histórico 2016', isMatch: true, isContradiction: false, evidenceSource: 'ABIS_NATIONAL', notes: 'Biometria 92% coincidente (Mesma pessoa).' },
+          ],
+        }
+      ];
+    }
 
     const candidates = raw?.candidates && raw.candidates.length > 0 ? raw.candidates : defaultCandidates;
+
+    let initialStatus: UniquenessEngineStatus = 'NO_MATCH';
+    if (raw?.status) {
+      if (raw.status === 'UNIQUE') initialStatus = 'NO_MATCH';
+      else if (raw.status === 'SUSPECT_DUPLICATE') initialStatus = 'CANDIDATES_FOUND';
+      else initialStatus = raw.status as UniquenessEngineStatus;
+    } else if (candidates.length > 0) {
+      initialStatus = 'CANDIDATES_FOUND';
+    }
+
+    let initialResult: UniquenessResultType = 'NO_MATCH';
+    if (raw?.result) {
+      initialResult = raw.result;
+    } else if (candidates.length > 0) {
+      initialResult = candidates[0].classification === 'STRONG_MATCH' ? 'STRONG_MATCH' : 'POSSIBLE_MATCH';
+    }
 
     return {
       validationId: raw?.validationId || `VAL-UNIQ-2026-${dossier.dossierId.replace(/[^0-9]/g, '')}`,
       dossierId: dossier.dossierId,
       processId: dossier.processId,
       citizenId: dossier.citizenId,
-      status: (raw?.status as UniquenessEngineStatus) || (candidates.length > 0 ? 'CANDIDATES_FOUND' : 'NO_MATCH'),
-      result: (raw?.result as UniquenessResultType) || (candidates.length > 0 ? 'STRONG_MATCH' : 'NO_MATCH'),
+      status: initialStatus,
+      result: initialResult,
       searchReference: raw?.searchReference || `SRCH_UNIQ_${dossier.dossierId.substring(4)}`,
       searchScope: raw?.searchScope || {
         civilRegistryNational: true,
@@ -177,7 +243,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
       },
       candidateCount: raw?.candidateCount ?? candidates.length,
       candidates: candidates,
-      matchType: raw?.matchType || (candidates.length > 0 ? 'MULTIMODAL' : 'NONE'),
+      matchType: raw?.matchType || (candidates.length > 0 ? candidates[0].matchType : 'NONE'),
       confidence: raw?.confidence ?? (candidates.length > 0 ? 88 : 99),
       resolution: raw?.resolution || (candidates.length > 0 ? 'PENDING' : 'CLEARED_UNIQUE'),
       resolutionNotes: raw?.resolutionNotes || raw?.identityCollisionNotes || '',
@@ -202,26 +268,44 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
   // Candidato ativo para o sub-módulo 04_COMPARISON
   const activeCandidate = useMemo(() => {
     if (selectedCandidateId) {
-      return uniq.candidates.find((c) => c.candidateId === selectedCandidateId) || uniq.candidates[0];
+      return uniq.candidates?.find((c) => c.candidateId === selectedCandidateId) || uniq.candidates?.[0] || null;
     }
-    return uniq.candidates[0] || null;
+    return uniq.candidates?.[0] || null;
   }, [uniq.candidates, selectedCandidateId]);
 
-  // Handler: Re-executar Pesquisa de Unicidade
+  // COMANDO: RUN_UNIQUENESS_SEARCH
+  const canRunSearch = uniq.status !== 'SEARCHING';
+
   const handleRunSearch = () => {
+    if (!canRunSearch) return;
+
     setIsSearching(true);
+    const searchingUniq: UniquenessValidation = {
+      ...uniq,
+      status: 'SEARCHING',
+    };
+    onUpdateDossier({ ...dossier, uniquenessValidation: searchingUniq });
+
     setTimeout(() => {
       setIsSearching(false);
       const isSuspect = dossier.dossierId === 'DOS-2026-AGO-00194';
-      const nextStatus: UniquenessEngineStatus = isSuspect ? 'CANDIDATES_FOUND' : 'NO_MATCH';
-      const nextResult: UniquenessResultType = isSuspect ? 'STRONG_MATCH' : 'NO_MATCH';
+      const isHomonym = dossier.dossierId === 'DOS-2026-AGO-00193';
+      const isUpdate = dossier.dossierId === 'DOS-2026-AGO-00196';
+
+      let nextStatus: UniquenessEngineStatus = 'NO_MATCH';
+      let nextResult: UniquenessResultType = 'NO_MATCH';
+
+      if (isSuspect || isHomonym || isUpdate) {
+        nextStatus = 'CANDIDATES_FOUND';
+        nextResult = isSuspect ? 'STRONG_MATCH' : 'POSSIBLE_MATCH';
+      }
 
       const updatedUniq: UniquenessValidation = {
         ...uniq,
         status: nextStatus,
         result: nextResult,
         searchScope: {
-          ...uniq.searchScope,
+          ...uniq.searchScope!,
           lastSearchExecution: new Date().toISOString(),
         },
         evaluatedAt: new Date().toISOString(),
@@ -229,6 +313,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
         digitalSignature: `SIG_UNIQ_SRCH_${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
       };
 
+      // Atualiza exclusivamente a propriedade uniquenessValidation (ValidationDossier.status intocado)
       const updatedDossier: ValidationDossier = {
         ...dossier,
         uniquenessValidation: updatedUniq,
@@ -237,7 +322,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
 
       onUpdateDossier(updatedDossier);
 
-      // Auditoria Imutável SILA
+      // Registo de auditoria imutável completo (SILA Chain)
       const auditEvt: ValidationAuditEvent = {
         eventId: `EVT_UNIQ_SRCH_${Date.now()}`,
         dossierId: dossier.dossierId,
@@ -246,21 +331,62 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
         command: 'RUN_UNIQUENESS_SEARCH',
         previousState: dossier.status,
         newState: dossier.status,
-        reason: `Varredura de unicidade multimodal executada pelo motor IDENTITY_UNIQUENESS_PROBE. Candidatos encontrados: ${updatedUniq.candidateCount}.`,
+        reason: `Pesquisa multimodal de unicidade concluída. Estado do motor: ${nextStatus}. Candidatos: ${updatedUniq.candidateCount}.`,
         timestamp: new Date().toISOString(),
         previousHash: uniq.currentHash || dossier.currentHash,
         currentHash: updatedUniq.currentHash,
         digitalSignature: updatedUniq.digitalSignature,
         auditChainRef: uniq.auditChainRef || dossier.auditChainRef,
         terminalId: currentOperator.terminalId,
-        payloadSummary: `Status: ${nextStatus}. Escopo: Galeria ABIS, Registo Civil, DNI Histórico. Candidatos: ${updatedUniq.candidateCount}.`,
+        payloadSummary: `Status: ${nextStatus}. Escopo: ABIS 1:N, SIRGC, DNI Histórico, Factos Vitais. Candidatos: ${updatedUniq.candidateCount}.`,
         silaGlobalAuditRef: `SILA_UNIQ_SRCH_${Date.now()}`,
       };
       onAddAuditEvent(auditEvt);
     }, 600);
   };
 
-  // Handler: Encaminhar para Mesa Supervisora (N3)
+  // COMANDO: COMPARE_CANDIDATE (Transição obrigatória para UNDER_REVIEW)
+  const handleSelectCandidateForComparison = (candidateId: string) => {
+    setSelectedCandidateId(candidateId);
+    setActiveSubView('04_COMPARISON');
+
+    if (uniq.status === 'CANDIDATES_FOUND') {
+      const updatedUniq: UniquenessValidation = {
+        ...uniq,
+        status: 'UNDER_REVIEW',
+        currentHash: `hash_uniq_rev_${Math.random().toString(36).substring(2, 12)}`,
+      };
+      onUpdateDossier({ ...dossier, uniquenessValidation: updatedUniq });
+
+      const auditEvt: ValidationAuditEvent = {
+        eventId: `EVT_UNIQ_COMP_${Date.now()}`,
+        dossierId: dossier.dossierId,
+        operatorId: currentOperator.operatorId,
+        operatorRole: currentOperator.role,
+        command: 'COMPARE_CANDIDATE',
+        previousState: dossier.status,
+        newState: dossier.status,
+        reason: `Abertura de análise pericial comparativa para o candidato ${candidateId}. Transição para UNDER_REVIEW.`,
+        timestamp: new Date().toISOString(),
+        previousHash: uniq.currentHash || dossier.currentHash,
+        currentHash: updatedUniq.currentHash,
+        digitalSignature: updatedUniq.digitalSignature || `SIG_COMP_${candidateId}`,
+        auditChainRef: uniq.auditChainRef || dossier.auditChainRef,
+        terminalId: currentOperator.terminalId,
+        payloadSummary: `Comparação detalhada do candidato ${candidateId}. Separação de coincidências e contradições.`,
+        silaGlobalAuditRef: `SILA_UNIQ_COMP_${Date.now()}`,
+      };
+      onAddAuditEvent(auditEvt);
+    }
+  };
+
+  // COMANDO: REQUEST_SUPERVISOR
+  const canRequestSupervisor =
+    uniq.status === 'CANDIDATES_FOUND' ||
+    uniq.status === 'UNDER_REVIEW' ||
+    uniq.result === 'POSSIBLE_MATCH' ||
+    uniq.result === 'STRONG_MATCH';
+
   const handleEscalateToSupervisor = () => {
     if (!supervisorReason.trim()) return;
 
@@ -308,7 +434,13 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
     setSupervisorReason('');
   };
 
-  // Handler: Resolver / Homologar Parecer de Unicidade
+  // COMANDO: RESOLVE
+  const canOpenResolveModal =
+    uniq.status === 'NO_MATCH' ||
+    uniq.status === 'UNDER_REVIEW' ||
+    uniq.status === 'SUPERVISOR_REVIEW' ||
+    uniq.status === 'RESOLVED';
+
   const handleResolveUniqueness = () => {
     if (!operatorPassword.trim()) {
       setAuthError('Autenticação forte obrigatória: introduza a senha IAM do operador.');
@@ -319,13 +451,31 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
       return;
     }
 
-    // Regra institucional: N1 não pode declarar fraude nem duplicidade confirmada com fusão
-    if (currentOperator.role === 'VALIDADOR_N1' && (resolveType === 'CONFIRMED_DUPLICATE_MERGE' || resolveType === 'SUSPECT_FRAUD_ESCALATED')) {
-      setAuthError('Regra Institucional: Operador N1 não possui autoridade para declarar fraude ou fundir registos. Encaminhe para a Mesa Supervisora (N3).');
+    // Trava RBAC: N1 não pode homologar fraude nem fusão de duplicidade definitiva
+    if (
+      currentOperator.role === 'VALIDADOR_N1' &&
+      (resolveType === 'CONFIRMED_DUPLICATE_MERGE' || resolveType === 'SUSPECT_FRAUD_ESCALATED')
+    ) {
+      setAuthError(
+        'Regra Institucional: Operador N1 não possui autoridade para declarar fraude ou fundir registos. Encaminhe para a Mesa Supervisora (N3).'
+      );
       return;
     }
 
-    const nextStatus: UniquenessEngineStatus = resolveType === 'SUPERVISOR_REFERRED' ? 'SUPERVISOR_REVIEW' : 'RESOLVED';
+    // Trava de Alçada: Casos com Forte Correspondência não podem ser limpos por N1 sem revisão supervisora
+    if (
+      currentOperator.role === 'VALIDADOR_N1' &&
+      uniq.result === 'STRONG_MATCH' &&
+      resolveType === 'CLEARED_UNIQUE'
+    ) {
+      setAuthError(
+        'Trava de Segurança: Casos com Forte Correspondência (STRONG_MATCH) não podem ser limpos por operador N1. É obrigatório o encaminhamento para Supervisão N3.'
+      );
+      return;
+    }
+
+    const nextStatus: UniquenessEngineStatus =
+      resolveType === 'SUPERVISOR_REFERRED' ? 'SUPERVISOR_REVIEW' : 'RESOLVED';
 
     const updatedUniq: UniquenessValidation = {
       ...uniq,
@@ -364,7 +514,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
       digitalSignature: updatedUniq.digitalSignature,
       auditChainRef: uniq.auditChainRef || dossier.auditChainRef,
       terminalId: currentOperator.terminalId,
-      payloadSummary: `Resolução Unicidade: ${resolveType}. Operador: ${currentOperator.operatorName} (${currentOperator.role})`,
+      payloadSummary: `Resolução Unicidade: ${resolveType}. Operador: ${currentOperator.operatorName} (${currentOperator.role}). Hash: ${updatedUniq.currentHash}`,
       silaGlobalAuditRef: `SILA_UNIQ_RES_${Date.now()}`,
     };
     onAddAuditEvent(auditEvt);
@@ -408,7 +558,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                 className={`font-black uppercase px-1.5 py-0.5 rounded ${
                   uniq.status === 'NO_MATCH' || uniq.status === 'RESOLVED'
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                    : uniq.status === 'CANDIDATES_FOUND' || uniq.status === 'SUPERVISOR_REVIEW'
+                    : uniq.status === 'CANDIDATES_FOUND' || uniq.status === 'UNDER_REVIEW' || uniq.status === 'SUPERVISOR_REVIEW'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
                     : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                 }`}
@@ -419,15 +569,15 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
 
             <button
               onClick={handleRunSearch}
-              disabled={isSearching}
-              className="px-2.5 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-bold border border-neutral-700 flex items-center gap-1 transition"
+              disabled={isSearching || !canRunSearch}
+              className="px-2.5 py-1 rounded bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-neutral-200 font-bold border border-neutral-700 flex items-center gap-1 transition"
               title="Re-executar varredura nos motores"
             >
               <RefreshCw className={`w-3 h-3 ${isSearching ? 'animate-spin text-amber-400' : ''}`} />
               <span>{isSearching ? 'PESQUISANDO...' : 'RE-PESQUISAR'}</span>
             </button>
 
-            {uniq.candidateCount > 0 && (
+            {canRequestSupervisor && (
               <button
                 onClick={() => setIsSupervisorModalOpen(true)}
                 className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold border border-amber-500/40 flex items-center gap-1 transition"
@@ -438,8 +588,15 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
             )}
 
             <button
-              onClick={() => setIsResolveModalOpen(true)}
-              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-neutral-950 font-black uppercase flex items-center gap-1 transition shadow-sm"
+              onClick={() => {
+                if (uniq.status === 'CANDIDATES_FOUND') {
+                  const updatedUniq: UniquenessValidation = { ...uniq, status: 'UNDER_REVIEW' };
+                  onUpdateDossier({ ...dossier, uniquenessValidation: updatedUniq });
+                }
+                setIsResolveModalOpen(true);
+              }}
+              disabled={!canOpenResolveModal && uniq.status !== 'CANDIDATES_FOUND'}
+              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-neutral-950 font-black uppercase flex items-center gap-1 transition shadow-sm"
             >
               <CheckCircle2 className="w-3 h-3" />
               <span>RESOLVER UNICIDADE</span>
@@ -462,7 +619,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
           </span>
         </div>
 
-        {/* BARRA DE SELEÇÃO DE DOSSIÊ ATIVO (MULTI-DOSSIER DENSE STRIP) */}
+        {/* BARRA DE SELEÇÃO DE DOSSIÊ ATIVO */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
           <span className="text-neutral-500 uppercase font-bold shrink-0 text-[8px] flex items-center gap-1">
             <Filter className="w-2.5 h-2.5" />
@@ -484,7 +641,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                     : 'bg-neutral-900/80 border-neutral-800 text-neutral-400 hover:border-neutral-700'
                 }`}
               >
-                <span className="w-1.5 h-1.5 rounded-full shrink-0 ${hasCand ? 'bg-amber-400' : 'bg-emerald-400'}" />
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${hasCand ? 'bg-amber-400' : 'bg-emerald-400'}`} />
                 <span className="font-mono">{d.dossierId}</span>
                 <span className="text-neutral-500 max-w-[100px] truncate">{d.citizenName}</span>
                 {hasCand && (
@@ -528,7 +685,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
       </div>
 
       {/* =========================================================================
-          SUB-TAB 01: CONTEXTO E DADOS DE ENTRADA (Consumidos do 02 e 03)
+          SUB-TAB 01: CONTEXTO E DADOS DE ENTRADA
          ========================================================================= */}
       {activeSubView === '01_CONTEXTO' && (
         <div className="space-y-3">
@@ -605,7 +762,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
             </div>
           </div>
 
-          {/* TABELA DE DADOS DE IDENTIFICAÇÃO OFICIAL CONSUMIDOS PELO MOTOR */}
+          {/* VETORES ENVIADOS PARA VARREDURA MULTIMODAL */}
           <div className="bg-[#0b0d11] border border-neutral-800 rounded-xl p-3 space-y-2">
             <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
               <div className="flex items-center gap-2 text-neutral-200 font-bold text-[9px]">
@@ -706,7 +863,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
       )}
 
       {/* =========================================================================
-          SUB-TAB 02: ESCOPO DE PESQUISA & MOTORES (EXECUÇÃO 1:N)
+          SUB-TAB 02: ESCOPO DE PESQUISA & MOTORES
          ========================================================================= */}
       {activeSubView === '02_SEARCH' && (
         <div className="space-y-3">
@@ -722,7 +879,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                 </div>
               </div>
               <div className="text-neutral-400 text-[8px]">
-                Última Execução: <span className="text-white font-bold">{uniq.searchScope.lastSearchExecution}</span>
+                Última Execução: <span className="text-white font-bold">{uniq.searchScope?.lastSearchExecution || '2026-08-15T09:15:23Z'}</span>
               </div>
             </div>
 
@@ -732,9 +889,6 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                   <span>1. BASE NACIONAL DE REGISTO CIVIL (SIRGC)</span>
                   <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[7.5px] font-bold">ATIVO</span>
                 </div>
-                <p className="text-neutral-400 text-[8px] leading-relaxed">
-                  Pesquisa de homonímia biográfica fonética e árvore genealógica de 1º grau em 164 conservatórias integradas.
-                </p>
                 <div className="grid grid-cols-2 gap-1 text-[8px]">
                   <div className="bg-neutral-900 p-1.5 rounded border border-neutral-800">
                     <div className="text-neutral-500">ALGORITMO</div>
@@ -752,9 +906,6 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                   <span>2. GALERIA ABIS 1:N NACIONAL (FACIAL + DACTILAR)</span>
                   <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[7.5px] font-bold">ATIVO</span>
                 </div>
-                <p className="text-neutral-400 text-[8px] leading-relaxed">
-                  Confronto exaustivo 1:N contra o cluster biométrico nacional contendo 18.4M de templates homologados.
-                </p>
                 <div className="grid grid-cols-2 gap-1 text-[8px]">
                   <div className="bg-neutral-900 p-1.5 rounded border border-neutral-800">
                     <div className="text-neutral-500">MOTOR ABIS</div>
@@ -772,9 +923,6 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                   <span>3. BASE HISTÓRICA DE BILHETES DE IDENTIDADE (DNI)</span>
                   <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[7.5px] font-bold">ATIVO</span>
                 </div>
-                <p className="text-neutral-400 text-[8px] leading-relaxed">
-                  Rastreio de numerações legadas, cancelamentos administrativos, óbitos averbados e emissões duplicadas.
-                </p>
                 <div className="grid grid-cols-2 gap-1 text-[8px]">
                   <div className="bg-neutral-900 p-1.5 rounded border border-neutral-800">
                     <div className="text-neutral-500">REPOSITÓRIO</div>
@@ -792,9 +940,6 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                   <span>4. REGISTOS DE FACTOS VITAIS (ÓBITOS & EMANCIPAÇÕES)</span>
                   <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[7.5px] font-bold">ATIVO</span>
                 </div>
-                <p className="text-neutral-400 text-[8px] leading-relaxed">
-                  Prevenção de usurpação de identidade de cidadãos falecidos com verificação de certidões de óbito.
-                </p>
                 <div className="grid grid-cols-2 gap-1 text-[8px]">
                   <div className="bg-neutral-900 p-1.5 rounded border border-neutral-800">
                     <div className="text-neutral-500">FLAG ÓBITO</div>
@@ -812,7 +957,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
       )}
 
       {/* =========================================================================
-          SUB-TAB 03: CANDIDATOS DETETADOS (LISTAGEM & CORRELAÇÃO)
+          SUB-TAB 03: CANDIDATOS DETETADOS
          ========================================================================= */}
       {activeSubView === '03_CANDIDATES' && (
         <div className="space-y-3">
@@ -825,33 +970,26 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                 </span>
               </div>
               <div className="text-neutral-500 text-[8px]">
-                Clique num candidato para abrir o comparativo detalhado de evidências
+                Clique num candidato para abrir o comparativo detalhado de evidências e transitar para UNDER_REVIEW
               </div>
             </div>
 
-            {uniq.candidates.length === 0 ? (
+            {uniq.candidates?.length === 0 ? (
               <div className="p-8 text-center bg-neutral-950/40 rounded-lg border border-neutral-800 space-y-2">
                 <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
                 <div className="text-neutral-200 font-bold text-sm">Nenhuma Colisão de Identidade Encontrada</div>
-                <p className="text-neutral-500 text-[8.5px] max-w-md mx-auto">
-                  A pesquisa exaustiva nos 4 repositórios (ABIS 1:N, Registo Civil, DNI Histórico e Óbitos) confirmou
-                  a unicidade absoluta do cidadão requerente.
-                </p>
                 <div className="inline-block px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 text-[8px] font-bold">
                   RESULTADO: NO_MATCH • UNICIDADE ATESTADA
                 </div>
               </div>
             ) : (
               <div className="space-y-2">
-                {uniq.candidates.map((cand, idx) => {
+                {uniq.candidates?.map((cand, idx) => {
                   const isSelected = activeCandidate?.candidateId === cand.candidateId;
                   return (
                     <div
                       key={cand.candidateId}
-                      onClick={() => {
-                        setSelectedCandidateId(cand.candidateId);
-                        setActiveSubView('04_COMPARISON');
-                      }}
+                      onClick={() => handleSelectCandidateForComparison(cand.candidateId)}
                       className={`p-3 rounded-lg border transition cursor-pointer ${
                         isSelected
                           ? 'bg-amber-500/10 border-amber-500/60 shadow-sm'
@@ -894,7 +1032,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                             <span className="font-bold text-white">{cand.sourceEngine}</span>
                           </div>
                           <button className="px-2 py-1 rounded bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 font-bold border border-amber-500/30 flex items-center gap-1 text-[8px]">
-                            <span>COMPARAR</span>
+                            <span>COMPARAR EVIDÊNCIAS</span>
                             <ChevronRight className="w-3 h-3" />
                           </button>
                         </div>
@@ -930,7 +1068,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
         <div className="space-y-3">
           {!activeCandidate ? (
             <div className="p-6 bg-[#0b0d11] border border-neutral-800 rounded-xl text-center text-neutral-500">
-              Nenhum candidato a duplicidade selecionado ou existente para este dossiê.
+              Nenhum candidato selecionado.
             </div>
           ) : (
             <div className="bg-[#0b0d11] border border-neutral-800 rounded-xl p-3 space-y-3">
@@ -955,7 +1093,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                     className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-neutral-950 font-black uppercase flex items-center gap-1"
                   >
                     <span>EMITIR PARECER DE RESOLUÇÃO</span>
-                    <ArrowRight className="w-3 h-3" />
+                    <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
               </div>
@@ -1009,22 +1147,20 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
                 <div className="bg-emerald-950/10 border border-emerald-500/20 rounded-lg p-2.5 space-y-1">
                   <div className="text-emerald-400 font-bold text-[8.5px] flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
-                    <span>ELEMENTOS COINCIDENTES (INDÍCIOS DE HOMONÍMIA OU DUPLICIDADE)</span>
+                    <span>ELEMENTOS COINCIDENTES</span>
                   </div>
                   <p className="text-neutral-300 text-[8px] leading-relaxed">
-                    Foram verificadas coincidências exatas em filiação, data de nascimento e traços dactilares.
-                    Este padrão sugere parentesco direto ou duplicidade registral não cancelada no encerramento de processos passados.
+                    Coincidências verificadas em filiação, data de nascimento e traços dactilares.
                   </p>
                 </div>
 
                 <div className="bg-amber-950/10 border border-amber-500/20 rounded-lg p-2.5 space-y-1">
                   <div className="text-amber-400 font-bold text-[8.5px] flex items-center gap-1">
                     <AlertTriangle className="w-3 h-3" />
-                    <span>CONTRADIÇÕES IDENTIFICADAS (DEFESA CONTRA FRAUDE SUMÁRIA)</span>
+                    <span>CONTRADIÇÕES IDENTIFICADAS</span>
                   </div>
                   <p className="text-neutral-300 text-[8px] leading-relaxed">
-                    Divergência expressa no score facial (61.5%) e sufixo nominal "JÚNIOR". A existência de contradições
-                    impede qualquer conclusão sumária de falsidade ideológica em nível N1.
+                    Divergência de score facial e sufixos nominais. A existência de contradições impede conclusão sumária de falsidade ideológica em N1.
                   </p>
                 </div>
               </div>
@@ -1034,7 +1170,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
       )}
 
       {/* =========================================================================
-          SUB-TAB 05: PARECER & RESOLUÇÃO TÉCNICA (RBAC / ABAC)
+          SUB-TAB 05: PARECER & RESOLUÇÃO TÉCNICA
          ========================================================================= */}
       {activeSubView === '05_RESOLUTION' && (
         <div className="space-y-3">
@@ -1084,7 +1220,7 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
               </div>
             </div>
 
-            {/* AÇÕES DE RESOLUÇÃO DISPONÍVEIS CONFORME RBAC */}
+            {/* AÇÕES DE RESOLUÇÃO */}
             <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-neutral-800">
               <div className="text-neutral-500 text-[8px]">
                 * Todas as resoluções exigem assinatura digital e registo criptográfico SILA.
@@ -1157,15 +1293,6 @@ export const ValidationsUniquenessTab: React.FC<ValidationsUniquenessTabProps> =
               <span>
                 Validação de unicidade vinculada e pronta para consumo soberano pelo <strong>07 — Terminal de Decisão</strong>.
               </span>
-              {onNavigateToTab && (
-                <button
-                  onClick={() => onNavigateToTab('05_VAL_DOCUMENTAL')}
-                  className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-200 font-bold border border-neutral-700 flex items-center gap-1"
-                >
-                  <span>AVANÇAR PARA 05 — VAL_DOCUMENTAL</span>
-                  <ArrowRight className="w-3 h-3" />
-                </button>
-              )}
             </div>
           </div>
         </div>

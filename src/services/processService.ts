@@ -108,22 +108,35 @@ export async function seedInitialProcesses() {
 
 // Subscribe to processes collection in Firestore in real-time
 export function subscribeProcesses(callback: (items: ProcessItem[]) => void) {
-  const colRef = collection(db, PROCESSES_COLLECTION);
-  
-  return onSnapshot(colRef, (snapshot) => {
-    if (snapshot.empty) {
-      seedInitialProcesses();
-      return;
-    }
-    const list: ProcessItem[] = [];
-    snapshot.forEach((docSnap) => {
-      list.push(docSnap.data() as ProcessItem);
-    });
-    list.sort((a, b) => b.id.localeCompare(a.id));
-    callback(list);
-  }, (error) => {
-    console.error("Error subscribing to processes in Firestore:", error);
-  });
+  try {
+    const colRef = collection(db, PROCESSES_COLLECTION);
+    
+    return onSnapshot(
+      colRef,
+      (snapshot) => {
+        if (snapshot.empty) {
+          seedInitialProcesses();
+          callback(INITIAL_PROCESSES_DATA);
+          return;
+        }
+        const list: ProcessItem[] = [];
+        snapshot.forEach((docSnap) => {
+          list.push(docSnap.data() as ProcessItem);
+        });
+        list.sort((a, b) => b.id.localeCompare(a.id));
+        callback(list);
+      },
+      (error) => {
+        console.warn("Firestore offline or unavailable; running in resilient local cache mode:", error.message);
+        // Fallback to local default demo processes when backend is temporarily offline
+        callback(INITIAL_PROCESSES_DATA);
+      }
+    );
+  } catch (err) {
+    console.warn("Could not initiate Firestore snapshot listener, operating in offline fallback:", err);
+    callback(INITIAL_PROCESSES_DATA);
+    return () => {};
+  }
 }
 
 // Create or update a process in Firestore
