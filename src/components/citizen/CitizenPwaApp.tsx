@@ -16,12 +16,14 @@ interface CitizenPwaAppProps {
   citizen: Citizen;
   onOpenAdminPortal?: () => void;
   onOpenPublicVerifier?: () => void;
+  onLockWallet?: () => void;
 }
 
 export const CitizenPwaApp: React.FC<CitizenPwaAppProps> = ({
   citizen,
   onOpenAdminPortal,
-  onOpenPublicVerifier
+  onOpenPublicVerifier,
+  onLockWallet
 }) => {
   const [activeTab, setActiveTab] = useState<CitizenNavTab>('HOME');
   const [showBiDetailModal, setShowBiDetailModal] = useState(false);
@@ -105,10 +107,23 @@ export const CitizenPwaApp: React.FC<CitizenPwaAppProps> = ({
               <SilaLogo size="sm" showSubtitle={false} />
             </div>
             
-            {/* Green Online Active Status Indicator Dot */}
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-sm">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
-              <span className="text-[10px] tracking-widest uppercase">ONLINE</span>
+            <div className="flex items-center gap-2">
+              {/* Bloquear Carteira button in header */}
+              {onLockWallet && (
+                <button
+                  onClick={onLockWallet}
+                  className="p-1.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-400 hover:text-rose-400 transition-colors"
+                  title="Bloquear Carteira"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Green Online Active Status Indicator Dot */}
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-sm">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
+                <span className="text-[10px] tracking-widest uppercase">ONLINE</span>
+              </div>
             </div>
           </div>
         </div>
@@ -199,6 +214,7 @@ export const CitizenPwaApp: React.FC<CitizenPwaAppProps> = ({
               biometricEnabled={biometricEnabled}
               onToggleBiometric={() => setBiometricEnabled(!biometricEnabled)}
               onTestBiometric={() => setShowBiometricModal(true)}
+              onLockWallet={onLockWallet}
             />
           </div>
         )}

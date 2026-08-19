@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Citizen } from '../../types/identity';
-import { Shield, Fingerprint, WifiOff, Bell, Key, LogOut, Check, ChevronRight, Download } from 'lucide-react';
+import { Shield, Fingerprint, WifiOff, Bell, Key, LogOut, Check, ChevronRight, Download, Lock } from 'lucide-react';
 import { formatBiNumber } from '../../utils/cryptoUtils';
 
 interface CitizenProfileProps {
@@ -8,13 +8,15 @@ interface CitizenProfileProps {
   biometricEnabled?: boolean;
   onToggleBiometric?: () => void;
   onTestBiometric?: () => void;
+  onLockWallet?: () => void;
 }
 
 export const CitizenProfile: React.FC<CitizenProfileProps> = ({
   citizen,
   biometricEnabled: propBiometricEnabled = true,
   onToggleBiometric,
-  onTestBiometric
+  onTestBiometric,
+  onLockWallet
 }) => {
   const [internalBiometric, setInternalBiometric] = useState(propBiometricEnabled);
   const [offlineToken, setOfflineToken] = useState(true);
@@ -65,7 +67,7 @@ export const CitizenProfile: React.FC<CitizenProfileProps> = ({
   };
 
   return (
-    <div className="w-full max-w-sm mx-auto space-y-4 pb-24">
+    <div className="w-full max-w-sm mx-auto space-y-4 pb-24 font-mono">
       {/* Citizen minimal profile header */}
       <div className="flex items-center gap-4 p-4 rounded-3xl bg-neutral-900 border border-neutral-800">
         <img
@@ -80,7 +82,7 @@ export const CitizenProfile: React.FC<CitizenProfileProps> = ({
         </div>
       </div>
 
-      {/* PIN & BIOMETRIA | CREDENCIAIS (Ultra-compact 2x2 aesthetic grid) */}
+      {/* PIN & BIOMETRIA | CREDENCIAIS */}
       <div className="rounded-2xl bg-neutral-900/90 border border-neutral-800/90 p-2.5 space-y-2">
         <div className="flex items-center justify-between px-1 pb-1 border-b border-neutral-800/80">
           <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -92,7 +94,7 @@ export const CitizenProfile: React.FC<CitizenProfileProps> = ({
           </span>
         </div>
 
-        {/* Ultra-compact 2-column grid */}
+        {/* 2-column grid */}
         <div className="grid grid-cols-2 gap-1.5 font-mono text-[10px]">
           
           {/* Biometria (Face/Touch ID) */}
@@ -123,12 +125,12 @@ export const CitizenProfile: React.FC<CitizenProfileProps> = ({
             <div className="flex items-center gap-1.5 min-w-0">
               <Key className="w-3.5 h-3.5 text-purple-400 shrink-0" />
               <div className="flex flex-col min-w-0">
-                <span className="font-bold text-white truncate text-[10px]">PIN ACESSO</span>
-                <span className="text-[8px] text-neutral-400 truncate">4 Dígitos</span>
+                <span className="font-bold text-white truncate text-[10px]">PIN PADRÃO</span>
+                <span className="text-[8px] text-neutral-400 truncate">12345</span>
               </div>
             </div>
             <span className="px-1.5 py-0.5 rounded text-[9px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30">
-              ••••
+              12345
             </span>
           </div>
 
@@ -181,8 +183,24 @@ export const CitizenProfile: React.FC<CitizenProfileProps> = ({
         </div>
       </div>
 
-      {/* Action Buttons (Collapsible/minimal style) */}
+      {/* Action Buttons */}
       <div className="space-y-2">
+        {/* BOTÃO: BLOQUEAR CARTEIRA (PURGE SENSITIVE VISUAL DATA) */}
+        {onLockWallet && (
+          <button
+            onClick={onLockWallet}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 text-rose-400 text-xs font-mono font-bold transition-all shadow-sm active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-rose-400" />
+              <span>BLOQUEAR CARTEIRA</span>
+            </div>
+            <span className="text-[10px] bg-rose-500/20 text-rose-300 px-2 py-0.5 rounded-full uppercase">
+              ISOLAR DADOS
+            </span>
+          </button>
+        )}
+
         <button
           onClick={handleInstallPWA}
           className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-gradient-to-r from-amber-500/20 to-emerald-500/10 hover:from-amber-500/30 hover:to-emerald-500/20 border border-amber-500/50 text-amber-300 text-xs font-mono font-bold transition-all shadow-sm"
@@ -219,16 +237,6 @@ export const CitizenProfile: React.FC<CitizenProfileProps> = ({
             <span>COPIAR IDENTIFICADOR BI</span>
           </div>
           {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <ChevronRight className="w-4 h-4 text-neutral-500" />}
-        </button>
-
-        <button
-          className="w-full flex items-center justify-between px-4 py-3 rounded-2xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-200 text-xs font-mono font-semibold transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-emerald-400" />
-            <span>EXPORTAR CERTIFICADO DIGITAL</span>
-          </div>
-          <ChevronRight className="w-4 h-4 text-neutral-500" />
         </button>
       </div>
 

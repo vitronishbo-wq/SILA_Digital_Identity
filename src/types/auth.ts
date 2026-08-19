@@ -45,6 +45,37 @@ export type OrganizationalScope =
   | 'POSTO_ATENDIMENTO_CABINDA'
   | 'BALCAO_DIGITAL_NACIONAL';
 
+// State machine definitions:
+// LOCKED → CITIZEN_AUTHENTICATED → ADMIN_AUTHENTICATED → AUTHORIZED_OPERATION
+// With transitions for REAUTH_REQUIRED, IAM_VERIFICATION, COMMAND_AUTHORIZED, SILA_CHAIN_AUDIT
+export type AppAuthState =
+  | 'LOCKED'
+  | 'CITIZEN_AUTHENTICATED'
+  | 'ADMIN_AUTHENTICATED'
+  | 'REAUTH_REQUIRED'
+  | 'IAM_VERIFICATION'
+  | 'COMMAND_AUTHORIZED'
+  | 'AUTHORIZED_OPERATION';
+
+export interface CitizenSession {
+  authenticatedAt: string;
+  citizenBiNumber: string;
+  authMethod: 'PIN' | 'BIOMETRIC' | 'CREDENTIALS';
+  sessionStatus: 'ACTIVE' | 'EXPIRED';
+}
+
+export interface AdminAuthenticationRequest {
+  secretSequence?: string;
+  operatorRole?: OperatorRole;
+  hardwareKeyPresent?: boolean;
+}
+
+export interface AdminAuthenticationResult {
+  success: boolean;
+  session?: OperatorSession;
+  errorMessage?: string;
+}
+
 export interface PolicyCondition {
   requiresMfa: boolean;
   requiresReauthMinutes?: number; // Reauth required if last reauth > X minutes ago

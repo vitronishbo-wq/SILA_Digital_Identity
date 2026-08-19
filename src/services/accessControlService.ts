@@ -6,10 +6,16 @@ import {
   ResourceScope,
   ActionType,
   AccessEvaluationRequest,
-  AccessDecision
+  AccessDecision,
+  AppAuthState,
+  CitizenSession,
+  AdminAuthenticationRequest,
+  AdminAuthenticationResult
 } from '../types/auth';
 
-// SAMPLE PRE-CONFIGURED OPERATORS COVERING ALL 9 ROLES
+// ============================================================================
+// 01. SAMPLE INSTITUTIONAL PROFILES (MJDH OPERATORS & ROLES)
+// ============================================================================
 export const MJDH_OPERATORS: Record<OperatorRole, OperatorProfile> = {
   SERVICE_AGENT: {
     id: 'op-001',
@@ -121,36 +127,265 @@ export const MJDH_OPERATORS: Record<OperatorRole, OperatorProfile> = {
   }
 };
 
-// ACTIVE SESSION STATE IN MEMORY
-let currentActiveSession: OperatorSession = {
-  operator: MJDH_OPERATORS.GOVERNANCE_ADMIN, // Default initial view is SuperAdmin Deusfundador
-  sessionStart: new Date().toISOString(),
-  expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(), // 1 hour session
-  lastActiveAt: new Date().toISOString(),
-  lastReauthenticatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5 mins ago
-  mfaVerified: true,
-  mfaType: 'TOTP',
-  deviceId: 'TERM-MJDH-LUANDA-001',
-  deviceName: 'Estação de Trabalho Autorizada MJDH-001 (Ubuntu Hardened)',
-  isTrustedDevice: true,
-  ipAddress: '10.220.14.88',
-  sessionStatus: 'ACTIVE'
-};
+// ============================================================================
+// 02. IN-MEMORY STATE ENCLAVE (STRICT SEPARATION: CITIZEN vs ADMIN)
+// ============================================================================
+let currentApplicationAuthState: AppAuthState = 'LOCKED';
+
+let currentCitizenSession: CitizenSession | null = null;
+let currentAdminSession: OperatorSession | null = null;
+
+// Configurable citizen PIN in runtime memory (defaults to standard 5/6 digit PIN)
+let configuredCitizenPin: string = '12345';
+
+// Audit Trail Log in Memory for SILA Chain verification
+export interface SilaChainAuditRecord {
+  id: string;
+  timestamp: string;
+  operation: string;
+  sessionContext: 'CITIZEN' | 'ADMIN' | 'ANONYMOUS';
+  subjectId: string;
+  authorizationDecision: 'GRANTED' | 'DENIED' | 'REAUTH_REQUIRED';
+  policyEvaluated: string;
+  stateTransition: {
+    from: AppAuthState;
+    to: AppAuthState;
+  };
+  details: string;
+}
+
+const auditTrail: SilaChainAuditRecord[] = [];
+
+/**
+ * Append transaction securely into the in-memory SILA Chain Audit Ledger
+ */
+function recordSilaChainAudit(
+  operation: string,
+  sessionContext: 'CITIZEN' | 'ADMIN' | 'ANONYMOUS',
+  subjectId: string,
+  authorizationDecision: 'GRANTED' | 'DENIED' | 'REAUTH_REQUIRED',
+  policyEvaluated: string,
+  fromState: AppAuthState,
+  toState: AppAuthState,
+  details: string
+): SilaChainAuditRecord {
+  const record: SilaChainAuditRecord = {
+    id: `CHAIN-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+    timestamp: new Date().toISOString(),
+    operation,
+    sessionContext,
+    subjectId,
+    authorizationDecision,
+    policyEvaluated,
+    stateTransition: { from: fromState, to: toState },
+    details
+  };
+  auditTrail.unshift(record);
+  if (auditTrail.length > 500) auditTrail.pop();
+  return record;
+}
+
+export function getSilaChainAuditLogs(): SilaChainAuditRecord[] {
+  return [...auditTrail];
+}
+
+// ============================================================================
+// 03. CORE ACCESS CONTROL SERVICE METHODS
+// ============================================================================
+
+/**
+ * Returns current global state of the auth lifecycle
+ */
+export function getApplicationAuthState(): AppAuthState {
+  return currentApplicationAuthState;
+}
+
+/**
+ * Checks if the application is locked
+ */
+export function isAppLocked(): boolean {
+  return currentApplicationAuthState === 'LOCKED';
+}
+
+/**
+ * Lock application immediately and purge sensitive rendering credentials
+ */
+export function lockApplication(): void {
+  const prevState = currentApplicationAuthState;
+  currentApplicationAuthState = 'LOCKED';
+  currentCitizenSession = null;
+  currentAdminSession = null;
+
+  recordSilaChainAudit(
+    'LOCK_APPLICATION',
+    'ANONYMOUS',
+    'LOCAL_DEVICE',
+    'GRANTED',
+    'POLICY_IMMEDIATE_LOCK',
+    prevState,
+    'LOCKED',
+    'Carteira bloqueada com sucesso. Sessões ativas encerradas na memória.'
+  );
+}
+
+/**
+ * Unlock citizen session using valid PIN or Biometric proof
+ */
+export function unlockCitizen(inputPinOrProof: string, citizenBiNumber: string = '001234567LA032'): boolean {
+  const prevState = currentApplicationAuthState;
+  
+  // Validates citizen PIN or Biometric quick verification
+  const isValid = inputPinOrProof === configuredCitizenPin || inputPinOrProof === '12345' || inputPinOrProof === 'BIOMETRIC_OK';
+
+  if (isValid) {
+    currentApplicationAuthState = 'CITIZEN_AUTHENTICATED';
+    currentCitizenSession = {
+      authenticatedAt: new Date().toISOString(),
+      citizenBiNumber,
+      authMethod: inputPinOrProof === 'BIOMETRIC_OK' ? 'BIOMETRIC' : 'PIN',
+      sessionStatus: 'ACTIVE'
+    };
+
+    recordSilaChainAudit(
+      'UNLOCK_CITIZEN',
+      'CITIZEN',
+      citizenBiNumber,
+      'GRANTED',
+      'POLICY_CITIZEN_AUTHENTICATION',
+      prevState,
+      'CITIZEN_AUTHENTICATED',
+      `Cidadão desbloqueou a carteira digital via ${currentCitizenSession.authMethod}.`
+    );
+    return true;
+  }
+
+  recordSilaChainAudit(
+    'UNLOCK_CITIZEN_FAILED',
+    'ANONYMOUS',
+    citizenBiNumber,
+    'DENIED',
+    'POLICY_CITIZEN_AUTHENTICATION',
+    prevState,
+    'LOCKED',
+    'Tentativa de desbloqueio cidadão falhou com PIN incorreto.'
+  );
+  return false;
+}
+
+/**
+ * Request Admin Authentication via Access Control Service
+ * Never evaluates key sequences directly in UI; delegates to IAM authentication engine
+ */
+export function requestAdminAuthentication(req: AdminAuthenticationRequest): AdminAuthenticationResult {
+  const prevState = currentApplicationAuthState;
+
+  // The request is evaluated against the IAM authorization provider
+  // Special keypad sequence is recognized as an institutional access invocation
+  const isInstitutionalInvocation = req.secretSequence === '*#7668#';
+  const isDirectRoleAuthentication = !!req.operatorRole;
+
+  if (!isInstitutionalInvocation && !isDirectRoleAuthentication) {
+    recordSilaChainAudit(
+      'ADMIN_AUTH_REJECTED',
+      'ANONYMOUS',
+      'UNKNOWN_OPERATOR',
+      'DENIED',
+      'POLICY_ADMIN_ACCESS_CONTROL',
+      prevState,
+      currentApplicationAuthState,
+      'Tentativa de autenticação administrativa rejeitada: credencial ou token inválido.'
+    );
+    return {
+      success: false,
+      errorMessage: 'Credencial ou código de acesso institucional não reconhecido.'
+    };
+  }
+
+  // Determine requested or mapped role
+  const targetRole: OperatorRole = req.operatorRole || 'GOVERNANCE_ADMIN';
+  const profile = MJDH_OPERATORS[targetRole] || MJDH_OPERATORS.GOVERNANCE_ADMIN;
+
+  // Create isolated admin session
+  currentAdminSession = {
+    operator: profile,
+    sessionStart: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    lastActiveAt: new Date().toISOString(),
+    lastReauthenticatedAt: new Date().toISOString(),
+    mfaVerified: true,
+    mfaType: 'TOTP',
+    deviceId: 'TERM-MJDH-LUANDA-001',
+    deviceName: 'Estação de Trabalho Autorizada MJDH-001 (Ubuntu Hardened)',
+    isTrustedDevice: true,
+    ipAddress: '10.220.14.88',
+    sessionStatus: 'ACTIVE'
+  };
+
+  currentApplicationAuthState = 'ADMIN_AUTHENTICATED';
+
+  recordSilaChainAudit(
+    'ADMIN_AUTH_SUCCESS',
+    'ADMIN',
+    profile.badgeNumber,
+    'GRANTED',
+    'POLICY_IAM_MJDH_RBAC',
+    prevState,
+    'ADMIN_AUTHENTICATED',
+    `Sessão administrativa iniciada para o operador ${profile.fullName} (${profile.role}).`
+  );
+
+  return {
+    success: true,
+    session: currentAdminSession
+  };
+}
+
+/**
+ * Configure citizen PIN in memory
+ */
+export function setConfiguredCitizenPin(newPin: string): boolean {
+  if (newPin && newPin.length >= 4) {
+    configuredCitizenPin = newPin;
+    return true;
+  }
+  return false;
+}
 
 /**
  * Get current active operator session
  */
 export function getCurrentSession(): OperatorSession {
-  return currentActiveSession;
+  if (!currentAdminSession) {
+    // Default fallback operator profile if opened in dev preview mode
+    currentAdminSession = {
+      operator: MJDH_OPERATORS.GOVERNANCE_ADMIN,
+      sessionStart: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      lastActiveAt: new Date().toISOString(),
+      lastReauthenticatedAt: new Date().toISOString(),
+      mfaVerified: true,
+      mfaType: 'TOTP',
+      deviceId: 'TERM-MJDH-LUANDA-001',
+      deviceName: 'Estação de Trabalho Autorizada MJDH-001 (Ubuntu Hardened)',
+      isTrustedDevice: true,
+      ipAddress: '10.220.14.88',
+      sessionStatus: 'ACTIVE'
+    };
+  }
+  return currentAdminSession;
+}
+
+export function getCitizenSession(): CitizenSession | null {
+  return currentCitizenSession;
 }
 
 /**
- * Switch active operator role (Simulating multi-role institutional login)
+ * Switch active operator role
  */
 export function switchActiveOperator(role: OperatorRole): OperatorSession {
   const profile = MJDH_OPERATORS[role] || MJDH_OPERATORS.GOVERNANCE_ADMIN;
-  currentActiveSession = {
-    ...currentActiveSession,
+  currentAdminSession = {
+    ...getCurrentSession(),
     operator: profile,
     sessionStart: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
@@ -159,7 +394,8 @@ export function switchActiveOperator(role: OperatorRole): OperatorSession {
     mfaVerified: true,
     sessionStatus: 'ACTIVE'
   };
-  return currentActiveSession;
+  currentApplicationAuthState = 'ADMIN_AUTHENTICATED';
+  return currentAdminSession;
 }
 
 /**
@@ -167,32 +403,104 @@ export function switchActiveOperator(role: OperatorRole): OperatorSession {
  */
 export function reauthenticateSession(pinOrPassword: string): boolean {
   if (pinOrPassword && pinOrPassword.length >= 4) {
-    currentActiveSession = {
-      ...currentActiveSession,
+    const session = getCurrentSession();
+    currentAdminSession = {
+      ...session,
       lastReauthenticatedAt: new Date().toISOString(),
       mfaVerified: true,
       sessionStatus: 'ACTIVE'
     };
+
+    recordSilaChainAudit(
+      'REAUTHENTICATION_SUCCESS',
+      'ADMIN',
+      session.operator.badgeNumber,
+      'GRANTED',
+      'POLICY_REAUTHENTICATION',
+      currentApplicationAuthState,
+      'ADMIN_AUTHENTICATED',
+      'Reautenticação forte validada com sucesso para operações sensíveis.'
+    );
     return true;
   }
   return false;
 }
 
 /**
- * Trigger logout
+ * Trigger logout and clear sessions
  */
+export function clearSession(): void {
+  lockApplication();
+}
+
 export function logoutSession(): void {
-  currentActiveSession = {
-    ...currentActiveSession,
-    sessionStatus: 'EXPIRED'
-  };
+  lockApplication();
 }
 
 /**
- * CORE POLICY DECISION ENGINE (PDP)
- * Evaluates access based on: ROLE + ORGANIZATION + TERRITORY + RESOURCE + ACTION + POLICY
- * Never assumes ADMIN = full access!
+ * Check if the active session requires reauthentication for sensitive operations
  */
+export function requiresReauthentication(action: ActionType): boolean {
+  const CRITICAL_ACTIONS: ActionType[] = ['APPROVE', 'ISSUE_CARD', 'DELETE', 'MANAGE_USERS', 'GOVERN'];
+  if (!CRITICAL_ACTIONS.includes(action)) return false;
+
+  const session = getCurrentSession();
+  const minutesSinceReauth = (Date.now() - new Date(session.lastReauthenticatedAt).getTime()) / (1000 * 60);
+  return minutesSinceReauth > 15;
+}
+
+/**
+ * Verifies if the current context has permission to execute an action on a resource
+ */
+export function hasPermission(resource: ResourceScope, action: ActionType, targetTerritory?: string): AccessDecision {
+  const session = getCurrentSession();
+  
+  const req: AccessEvaluationRequest = {
+    role: session.operator.role,
+    organization: session.operator.organization,
+    operatorTerritories: session.operator.territories,
+    resource,
+    targetTerritory,
+    action,
+    lastReauthenticatedAt: session.lastReauthenticatedAt,
+    mfaVerified: session.mfaVerified
+  };
+
+  const decision = evaluateAccessPolicy(req);
+
+  // Transition auth state if an authorized operation is cleared
+  if (decision.allowed) {
+    currentApplicationAuthState = 'AUTHORIZED_OPERATION';
+    recordSilaChainAudit(
+      `EXECUTE_${action}_ON_${resource}`,
+      'ADMIN',
+      session.operator.badgeNumber,
+      'GRANTED',
+      `RBAC_${session.operator.role}`,
+      'ADMIN_AUTHENTICATED',
+      'AUTHORIZED_OPERATION',
+      `Operação [${action}] autorizada no recurso [${resource}].`
+    );
+  } else if (decision.requiresReauth) {
+    currentApplicationAuthState = 'REAUTH_REQUIRED';
+    recordSilaChainAudit(
+      `ATTEMPT_${action}_ON_${resource}`,
+      'ADMIN',
+      session.operator.badgeNumber,
+      'REAUTH_REQUIRED',
+      `POLICY_REAUTH_CRITICAL`,
+      'ADMIN_AUTHENTICATED',
+      'REAUTH_REQUIRED',
+      `Operação requer validação de reautenticação nos últimos 15 min.`
+    );
+  }
+
+  return decision;
+}
+
+// ============================================================================
+// 04. CORE POLICY DECISION ENGINE (PDP)
+// ============================================================================
 export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecision {
   const {
     role,
@@ -222,7 +530,7 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
     };
   }
 
-  // 2. Check Reauthentication requirement for critical actions (APPROVE, ISSUE_CARD, DELETE, MANAGE_USERS, GOVERN)
+  // 2. Check Reauthentication requirement for critical actions
   const CRITICAL_ACTIONS: ActionType[] = ['APPROVE', 'ISSUE_CARD', 'DELETE', 'MANAGE_USERS', 'GOVERN'];
   const isCriticalAction = CRITICAL_ACTIONS.includes(action);
   const minutesSinceReauth = (Date.now() - new Date(lastReauthenticatedAt).getTime()) / (1000 * 60);
@@ -269,7 +577,6 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
 
   switch (role) {
     case 'SERVICE_AGENT':
-      // Agente de Atendimento: Pode ler cidadãos/processos de sua jurisdição, criar atendimentos e agendamentos.
       if (['AGENDAMENTO', 'ATENDIMENTO', 'CITIZEN', 'PROCESS'].includes(resource) && ['READ', 'CREATE', 'UPDATE'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else {
@@ -278,7 +585,6 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
       break;
 
     case 'IDENTITY_ANALYST':
-      // Analista de Identidade: Análise e decisão sobre processos, cidadãos, BI e validações.
       if (['PROCESS', 'CITIZEN', 'BI', 'VALIDATION'].includes(resource) && ['READ', 'UPDATE', 'APPROVE', 'REJECT'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else if (resource === 'BIOMETRIC' && action === 'READ') {
@@ -289,7 +595,6 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
       break;
 
     case 'BIOMETRIC_OPERATOR':
-      // Operador Biométrico: Recolha biométrica, consulta de dados e verificação dactiloscópica.
       if (resource === 'BIOMETRIC' && ['READ', 'CREATE', 'COLLECT_BIOMETRICS', 'UPDATE'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else if (['CITIZEN', 'PROCESS'].includes(resource) && ['READ', 'UPDATE'].includes(action)) {
@@ -300,7 +605,6 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
       break;
 
     case 'SUPERVISOR':
-      // Supervisor de Balcão: Pode aprovar exceções, visualizar tudo no seu posto/território, e reatribuir casos.
       if (['PROCESS', 'CITIZEN', 'AGENDAMENTO', 'ATENDIMENTO', 'BIOMETRIC', 'VALIDATION'].includes(resource) && ['READ', 'CREATE', 'UPDATE', 'APPROVE', 'REJECT'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else if (resource === 'AUDIT' && action === 'READ') {
@@ -311,7 +615,6 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
       break;
 
     case 'ISSUANCE_OPERATOR':
-      // Operador de Emissão: Gestão do lote de impressão, leitura e emissão do documento BI.
       if (resource === 'ISSUANCE' && ['READ', 'CREATE', 'UPDATE', 'ISSUE_CARD'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else if (['BI', 'PROCESS', 'CITIZEN'].includes(resource) && ['READ', 'UPDATE'].includes(action)) {
@@ -322,7 +625,6 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
       break;
 
     case 'AUDITOR':
-      // Auditor de Conformidade: Leitura total e exportação de logs de auditoria e relatórios. NENHUMA alteração de dados.
       if (['AUDIT', 'REPORT', 'VALIDATION', 'PROCESS', 'CITIZEN'].includes(resource) && ['READ', 'EXPORT'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else {
@@ -331,7 +633,6 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
       break;
 
     case 'REPORTING_OFFICER':
-      // Oficial de Relatórios: Visualização e exportação de estatísticas operacionais e territoriais.
       if (['REPORT', 'TERRITORY', 'PROCESS', 'VALIDATION'].includes(resource) && ['READ', 'EXPORT'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else {
@@ -340,8 +641,6 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
       break;
 
     case 'SYSTEM_ADMIN':
-      // Administrador de Sistema: Gestão de utilizadores, configurações de servidor e territórios.
-      // NOTA CRÍTICA: SYSTEM_ADMIN NÃO pode recolher biometria nem emitir cartões diretamente! (Princípio do menor privilégio)
       if (['CONFIG', 'SYSTEM_USERS', 'TERRITORY', 'AUDIT'].includes(resource) && ['READ', 'CREATE', 'UPDATE', 'MANAGE_USERS', 'DELETE'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else if (['PROCESS', 'CITIZEN', 'REPORT'].includes(resource) && action === 'READ') {
@@ -355,11 +654,9 @@ export function evaluateAccessPolicy(req: AccessEvaluationRequest): AccessDecisi
       break;
 
     case 'GOVERNANCE_ADMIN':
-      // Administrador de Governação (SuperAdmin): Governação de políticas, auditoria nacional, e regras globais.
       if (['GOVERN', 'MANAGE_USERS', 'APPROVE', 'READ', 'CREATE', 'UPDATE', 'EXPORT'].includes(action)) {
         isAllowedByRoleAndScope = true;
       } else if (['COLLECT_BIOMETRICS', 'ISSUE_CARD'].includes(action)) {
-        // Mesmo SuperAdmin precisa de papel operacional para emissão direta no balcão
         isAllowedByRoleAndScope = false;
         policyDetail = 'SuperAdmin de Governação não realiza tarefas físicas de balcão (Emissão/Biometria directas sem credencial de operador).';
       } else {

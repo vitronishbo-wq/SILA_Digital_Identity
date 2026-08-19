@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, Firestore } from 'firebase/firestore';
 import { getClientEnvironment } from '../config/environment';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
@@ -19,4 +19,13 @@ const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 const targetDbId = clientEnv.firestoreDatabaseId || firebaseConfigJson.firestoreDatabaseId || '(default)';
 
-export const db: Firestore = getFirestore(app, targetDbId);
+/**
+ * Inicialização resiliente do Firestore com cache local persistente e suporte multi-tab.
+ * Se o backend remoto estiver temporariamente indisponível ou em rede restrita,
+ * o Firestore opera de forma transparente no cache local sem travar a interface.
+ */
+export const db: Firestore = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+}, targetDbId);
