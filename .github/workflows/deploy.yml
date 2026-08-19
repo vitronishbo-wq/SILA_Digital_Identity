@@ -1,0 +1,88 @@
+name: SILA GovOS — Canonical Multi-Cloud Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ============================================================================
+  # 01. VALIDATE: Validação Estrita do Contrato Canónico & Tipagem
+  # ============================================================================
+  validate-contract:
+    name: 01. Validate Environment & Types
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Strict TypeScript Compilation Check
+        run: npx tsc --noEmit
+
+  # ============================================================================
+  # 02. BUILD & DEPLOY FRONTEND: Firebase Hosting (Build-Time Public Only)
+  # ============================================================================
+  deploy-frontend-firebase:
+    name: 02. Build & Deploy Frontend (Firebase Hosting)
+    needs: validate-contract
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Compile Static Frontend SPA (Vite)
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'gen-lang-client-0113821724.firebaseapp.com' }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'gen-lang-client-0113821724' }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET || 'gen-lang-client-0113821724.firebasestorage.app' }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '1000457842504' }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:1000457842504:web:bdb10c3d9911d411154d7d' }}
+          VITE_FIRESTORE_DATABASE_ID: 'ai-studio-siladigitalident-3824b3dd-a639-4e6e-99fc-b2426258d225'
+          VITE_APP_TIMEZONE: 'Africa/Luanda'
+          VITE_APP_LOCALE: 'pt-PT'
+          VITE_APP_COUNTRY: 'AO'
+          VITE_SUPPORT_EMAIL: 'silaprimeiro@gmail.com'
+        run: npm run build
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        if: env.FIREBASE_SERVICE_ACCOUNT != ''
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          channelId: live
+          projectId: gen-lang-client-0113821724
+
+  # ============================================================================
+  # 03. TRIGGER BACKEND DEPLOY: Render Webhook (Runtime Private Environment)
+  # ============================================================================
+  deploy-backend-render:
+    name: 03. Trigger Backend Deployment (Render)
+    needs: validate-contract
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && secrets.RENDER_DEPLOY_HOOK_URL != ''
+    steps:
+      - name: Trigger Render Deploy Hook
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"

@@ -1,20 +1,22 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore';
+import { getClientEnvironment } from '../config/environment';
 import firebaseConfigJson from '../../firebase-applet-config.json';
 
+const clientEnv = getClientEnvironment();
+
+// Configuração canónica priorizando variáveis de ambiente com fallback para arquivo de provisionamento
 const firebaseConfig = {
-  apiKey: firebaseConfigJson.apiKey,
-  authDomain: firebaseConfigJson.authDomain,
-  projectId: firebaseConfigJson.projectId,
-  storageBucket: firebaseConfigJson.storageBucket,
-  messagingSenderId: firebaseConfigJson.messagingSenderId,
-  appId: firebaseConfigJson.appId,
+  apiKey: clientEnv.firebaseApiKey || firebaseConfigJson.apiKey,
+  authDomain: clientEnv.firebaseAuthDomain || firebaseConfigJson.authDomain,
+  projectId: clientEnv.firebaseProjectId || firebaseConfigJson.projectId,
+  storageBucket: clientEnv.firebaseStorageBucket || firebaseConfigJson.storageBucket,
+  messagingSenderId: clientEnv.firebaseMessagingSenderId || firebaseConfigJson.messagingSenderId,
+  appId: clientEnv.firebaseAppId || firebaseConfigJson.appId,
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-const databaseId = firebaseConfigJson.firestoreDatabaseId && firebaseConfigJson.firestoreDatabaseId !== '' 
-  ? firebaseConfigJson.firestoreDatabaseId 
-  : '(default)';
+const targetDbId = clientEnv.firestoreDatabaseId || firebaseConfigJson.firestoreDatabaseId || '(default)';
 
-export const db = getFirestore(app, databaseId);
+export const db: Firestore = getFirestore(app, targetDbId);

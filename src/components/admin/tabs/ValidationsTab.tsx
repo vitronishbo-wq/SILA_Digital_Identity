@@ -27,6 +27,7 @@ import {
   ArrowRight,
   KeyRound,
   Scale,
+  CreditCard,
   Check,
   X
 } from 'lucide-react';
@@ -40,9 +41,10 @@ import { ValidationsFinalDecisionTab } from './validations/ValidationsFinalDecis
 import { ValidationsExceptionsTab } from './validations/ValidationsExceptionsTab';
 import { ValidationsSupervisoryTab } from './validations/ValidationsSupervisoryTab';
 import { ValidationsDecisionAuditTab } from './validations/ValidationsDecisionAuditTab';
+import { ValidationsEmissionTab } from './validations/ValidationsEmissionTab';
 
 export const ValidationsTab: React.FC = () => {
-  // 10 Sub-módulos Operacionais Institucionais
+  // 11 Sub-módulos Operacionais Institucionais
   const [subTab, setSubTab] = useState<
     | '01_FILA_VALIDACAO'
     | '02_VAL_BIOGRAFICA'
@@ -54,6 +56,7 @@ export const ValidationsTab: React.FC = () => {
     | '08_EXCECOES_DISCREP'
     | '09_REVISAO_SUPERVISORA'
     | '10_AUDITORIA_DECISAO'
+    | '11_GESTAO_EMISSAO'
   >('01_FILA_VALIDACAO');
 
   // Estado dos Dossiês e Auditoria
@@ -218,6 +221,7 @@ export const ValidationsTab: React.FC = () => {
           { id: '08_EXCECOES_DISCREP', label: '08_EXCECOES_DISCREP', icon: AlertTriangle },
           { id: '09_REVISAO_SUPERVISORA', label: '09_REVISAO_SUPERVISORA', icon: Lock },
           { id: '10_AUDITORIA_DECISAO', label: '10_AUDITORIA_DECISAO', icon: KeyRound },
+          { id: '11_GESTAO_EMISSAO', label: '11_GESTAO_EMISSAO', icon: CreditCard },
         ].map(item => {
           const Icon = item.icon;
           const isActive = subTab === item.id;
@@ -363,6 +367,18 @@ export const ValidationsTab: React.FC = () => {
          ========================================================================= */}
       {subTab === '10_AUDITORIA_DECISAO' && (
         <ValidationsDecisionAuditTab
+          dossiers={dossiers}
+          activeDossierId={selectedDossierId}
+          onSelectDossier={setSelectedDossierId}
+          onAddAuditEvent={handleAddAuditEvent}
+        />
+      )}
+
+      {/* =========================================================================
+          11 — GESTÃO DE EMISSÃO & PERSONALIZAÇÃO DE BI (FÁBRICA NACIONAL)
+         ========================================================================= */}
+      {subTab === '11_GESTAO_EMISSAO' && (
+        <ValidationsEmissionTab
           dossiers={dossiers}
           activeDossierId={selectedDossierId}
           onSelectDossier={setSelectedDossierId}
